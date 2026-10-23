@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>航海家號：太陽系引力彈弓任務</title>
+<title>航海家號：太陽系引力彈弓任務｜3D game_3</title>
 <style>
 :root{
   --bg:#030711;--panel:#0a1424;--panel2:#10213a;--text:#edf7ff;--muted:#9fb6c9;
@@ -117,6 +117,14 @@ footer p{line-height:1.8;color:#d8e8f7}
 .pause-control{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:auto;min-width:172px;height:46px;padding:0 22px;font-size:16px;pointer-events:auto}
 .pause-control:hover,.pause-control:active{transform:translateX(-50%) translateY(-2px)}
 .telemetry-panel .action-dock .buttons button{border-bottom-color:rgba(255,255,255,.22);border-radius:0;color:#cfe8f8;font-weight:500}
+.mission-progress{margin:14px 0 4px;padding:12px 14px;border:1px solid rgba(114,241,184,.18);border-radius:14px;background:rgba(8,24,38,.55)}
+.mission-progress strong{display:block;font-size:14px;color:#72f1b8;margin-bottom:7px}
+.mission-progress ol{margin:0;padding-left:22px;color:#cfe8f8;line-height:1.65;font-size:13px}
+.mission-progress li.active{color:#ffd166;font-weight:700}
+.mission-progress li.done{text-decoration:line-through;color:#7192a7}
+.event-banner{position:absolute;z-index:6;left:50%;top:22px;transform:translateX(-50%) translateY(-12px);opacity:0;pointer-events:none;padding:10px 18px;border:1px solid rgba(114,241,184,.55);border-radius:999px;background:rgba(4,26,38,.9);color:#72f1b8;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .25s,transform .25s;white-space:nowrap}
+.event-banner.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.mission-brief{margin:10px 0 0;color:#b9d1e2;font-size:12px;line-height:1.55}
 @media(max-width:950px){
   .telemetry-panel{top:10px!important;right:14px!important;width:min(260px,50vw)!important;max-height:52dvh!important}
   .telemetry-panel h2{font-size:20px;margin-bottom:12px}
@@ -134,7 +142,7 @@ footer p{line-height:1.8;color:#d8e8f7}
   <h1>🚀 航海家號：太陽系引力彈弓任務</h1>
   <div class="subtitle">
     從地球附近出發，使用推進器修正航向，靠近不同的行星讓重力幫你轉彎與加速。
-    任務目標是依序探索外行星，最後抵達冥王星。這是一個教學用、比例經過壓縮的二維模擬。
+    任務目標是依序飛掠木星、土星、天王星、海王星，最後抵達冥王星。這是一個以 3D 視覺呈現、比例經過壓縮的引力彈弓教學遊戲。
   </div>
 </header>
 
@@ -142,9 +150,11 @@ footer p{line-height:1.8;color:#d8e8f7}
   <section class="card stage">
     <canvas id="space"></canvas>
     <div class="mission-panel" aria-live="polite">
-      <div class="mission-title">下一個目標</div>
+      <div class="mission-title">下一個航點</div>
       <div id="targetName" class="target-name">載入中……</div>
+      <div id="missionPhase" class="mission-brief">靠近行星外圍，讓重力替你轉彎。</div>
     </div>
+    <div class="event-banner" id="eventBanner" aria-live="polite"></div>
     <div class="hud" id="hud">載入任務中……</div>
     <div class="control-dock" aria-label="遊戲控制鍵">
       <div class="direction-pad" aria-label="方向控制">
@@ -152,7 +162,7 @@ footer p{line-height:1.8;color:#d8e8f7}
         <button id="left" aria-label="左轉，A 或左方向鍵">←</button>
         <button id="right" aria-label="右轉，D 或右方向鍵">→</button>
       </div>
-      <button id="pause" class="pause-control" aria-label="STOP/CONTINUE，空白鍵">STOP/CONTINUE</button>
+      <button id="pause" class="pause-control" aria-label="暫停或繼續，空白鍵">暫停</button>
     </div>
   </section>
 
@@ -184,15 +194,24 @@ footer p{line-height:1.8;color:#d8e8f7}
       <div class="stat"><span>已耗推進劑</span><b id="fuelUsed">0%</b></div>
       <div class="stat"><span>推進流量</span><b id="burnRate">0%/年</b></div>
       <div class="stat"><span>最近行星</span><b id="nearest">地球</b></div>
+      <div class="stat"><span>最近距離</span><b id="closest">—</b></div>
+      <div class="stat"><span>日心能量</span><b id="energy">—</b></div>
+      <div class="stat"><span>成功助推</span><b id="boosts">0 次</b></div>
       <div class="stat"><span>任務時間</span><b id="missionTime">0 年</b></div>
+    </div>
+
+    <div class="mission-progress">
+      <strong>Voyager 大巡航進度</strong>
+      <ol id="checklist"></ol>
     </div>
 
     <div class="section action-dock">
       <div class="buttons">
         <button id="reset">重新開始</button>
-        <button id="skip">跳到下一個目標</button>
+        <button id="skip">練習目前航點</button>
         <button id="cameraMode" type="button">切換為第一視角</button>
       </div>
+      <div class="mission-brief">玩法：依序從行星旁邊掠過，讓重力改變速度與方向。推進器只用來修正，燃料耗盡仍可靠重力滑行。</div>
     </div>
   </aside>
 </main>
@@ -375,14 +394,17 @@ const ui={
  timeScale:$('timeScale'),timeVal:$('timeVal'),zoom:$('zoom'),zoomVal:$('zoomVal'),
  assist:$('assist'),speed:$('speed'),fuel:$('fuel'),nearest:$('nearest'),
  fuelUsed:$('fuelUsed'),burnRate:$('burnRate'),missionTime:$('missionTime'),
- targetName:$('targetName'),reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode')
+ targetName:$('targetName'),missionPhase:$('missionPhase'),checklist:$('checklist'),
+ closest:$('closest'),energy:$('energy'),boosts:$('boosts'),eventBanner:$('eventBanner'),
+ reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode')
 };
 
 let W=0,H=0,dpr=1,last=0,running=true,keys={},camera={x:0,y:0,zoom:1,pitch:.48,yaw:-.08};
-let ship,planets=[],trail=[],stars=[],targetName='',missionTime=0;
+let ship,planets=[],trail=[],stars=[],missionIndex=0,missionTime=0,finished=false;
+const route=['木星','土星','天王星','海王星','冥王星'];
 let firstPerson=false,firstPersonYaw=0,firstPersonPitch=0;
 let demo={thrusting:false,burnRate:0,phase:'巡航'};
-let lastTargetName='';
+let lastTargetName='',targetEntered=false,boostMessageTimer=0;
 
 let renderer3d,scene3d,camera3d,textureLoader,ship3d,trail3d,trailDirty=true;
 let fallbackCanvas=null,ctx=null;
@@ -422,13 +444,9 @@ const planetData=[
  {name:'木星',rOrbit:310,size:18,mass:4.7,speed:.60,color:'#d9aa74',phase:.15},
  {name:'土星',rOrbit:405,size:15,mass:3.7,speed:.47,color:'#e8d18b',phase:1.28,ring:true},
  {name:'天王星',rOrbit:500,size:12,mass:2.1,speed:.36,color:'#8fe3e7',phase:2.55},
- {name:'海王星',rOrbit:585,size:12,mass:2.3,speed:.30,color:'#5275e8',phase:4.05}
+ {name:'海王星',rOrbit:585,size:12,mass:2.3,speed:.30,color:'#5275e8',phase:4.05},
+ {name:'冥王星',rOrbit:665,size:5,mass:.22,speed:.24,color:'#c9b6a4',phase:5.45}
 ];
-
-function chooseRandomTarget(excludeName=''){
-  const candidates=planetData.filter(p=>p.name!==excludeName);
-  return candidates[Math.floor(Math.random()*candidates.length)].name;
-}
 
 function loadTexture(file){
   const texture=textureLoader.load(textureBase+file);
@@ -549,6 +567,9 @@ function setup2DRenderer(){
 }
 
 function init(){
+  clearTimeout(showEvent.timer);
+  ui.eventBanner.classList.remove('show');
+  ui.eventBanner.textContent='';
   firstPerson=false;firstPersonYaw=0;firstPersonPitch=0;
   ui.cameraMode.textContent='切換為第一視角';
   planets=planetData.map(p=>({...p,angle:p.phase,x:0,y:0,vx:0,vy:0,visited:false}));
@@ -558,13 +579,15 @@ function init(){
     x:earth.x+15,y:earth.y-4,
     vx:earth.vx+35,vy:earth.vy-2,
     angle:Math.atan2(earth.vy,earth.vx),
-    fuel:100,fuelUsed:0,r:4,dead:false
+    fuel:100,fuelUsed:0,r:4,dead:false,closestApproach:Infinity,closestPlanet:'地球',boosts:0,lastBoost:0,clearedPlanet:'',clearanceGrace:0
   };
   camera.x=ship.x;camera.y=ship.y;camera.zoom=Number(ui.zoom.value);
   view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;view3d.yaw=-.52;view3d.pitch=.62;
   demo={thrusting:false,burnRate:0,phase:'巡航'};
-  trail=[];trailDirty=true;targetName=chooseRandomTarget('地球');lastTargetName='';missionTime=0;running=true;ui.pause.textContent='STOP/CONTINUE';
-  renderTarget();
+  trail=[];trailDirty=true;missionIndex=0;missionTime=0;finished=false;targetEntered=false;lastTargetName='';boostMessageTimer=0;
+  ship.closestApproach=Infinity;ship.closestPlanet='地球';ship.boosts=0;ship.lastBoost=0;ship.clearedPlanet='';ship.clearanceGrace=0;
+  running=true;syncPauseLabel();
+  renderTarget();renderChecklist();
 }
 
 function updatePlanets(dt){
@@ -577,11 +600,29 @@ function updatePlanets(dt){
   }
 }
 
+function currentTargetName(){return route[missionIndex]||'';}
 function renderTarget(){
-  ui.targetName.textContent=targetName||'載入中……';
+  const name=currentTargetName();
+  ui.targetName.textContent=name||'任務完成';
+  ui.missionPhase.textContent=name?`第 ${missionIndex+1}/${route.length} 航點：從行星公轉方向的後方掠過，通常能取得加速。`:'所有航點完成，航海家號已離開行星系。';
 }
-
-function targetPlanet(){return planets.find(p=>p.name===targetName);}
+function renderChecklist(){
+  ui.checklist.innerHTML=route.map((name,index)=>{
+    const cls=index<missionIndex?'done':(index===missionIndex?'active':'');
+    const marker=index<missionIndex?'✓ ':index===missionIndex?'➤ ':'';
+    return `<li class="${cls}">${marker}${name}</li>`;
+  }).join('');
+}
+function targetPlanet(){const name=currentTargetName();return name?planets.find(p=>p.name===name):null;}
+function showEvent(message){
+  ui.eventBanner.textContent=message;ui.eventBanner.classList.add('show');
+  clearTimeout(showEvent.timer);showEvent.timer=setTimeout(()=>ui.eventBanner.classList.remove('show'),3600);
+}
+function syncPauseLabel(){ui.pause.textContent=running?'暫停':'繼續';}
+function solarEnergy(){
+  const r=Math.hypot(ship.x,ship.y)||1;
+  return .5*(ship.vx*ship.vx+ship.vy*ship.vy)-24000/r;
+}
 
 function wrapAngle(a){
   while(a>Math.PI)a-=Math.PI*2;
@@ -634,8 +675,9 @@ function demoAutopilot(dt,target){
   const tx=target.vx/targetSpeed,ty=target.vy/targetSpeed;
   const cross=dx*target.vy-dy*target.vx;
   const side=cross>=0?1:-1;
-  const flyby=Math.max(target.size+42,58);
-  const lead=clamp(dist*.16,12,95);
+  // 展示模式刻意保留較大的飛掠半徑，讓自動路線不會切入行星本體。
+  const flyby=Math.max(target.size+60,76);
+  const lead=clamp(dist*.12,18,110);
   const aimX=target.x-tx*lead-ty*side*flyby;
   const aimY=target.y-ty*lead+tx*side*flyby;
   const desired=Math.atan2(aimY-ship.y,aimX-ship.x);
@@ -645,13 +687,13 @@ function demoAutopilot(dt,target){
   const desiredSpeed=clamp(dist*.18,36,86);
   const desiredVx=aimDx/aimDist*desiredSpeed+target.vx*.65;
   const desiredVy=aimDy/aimDist*desiredSpeed+target.vy*.65;
-  const guidePower=dist<150?.34:.58;
+  const guidePower=dist<220?.78:.58;
   demo.thrusting=angleError<1.2 && demoGuidedBurn(dt,desiredVx,desiredVy,guidePower);
   demo.phase=dist<120?'掠飛修正':(demo.thrusting?'自動推進':'重力滑行');
 }
 
 function updateShip(dt){
-  if(ship.dead)return;
+  if(ship.dead||finished)return;
   const target=targetPlanet();
 
   let turning=0,thrusting=false;
@@ -676,9 +718,8 @@ function updateShip(dt){
     if(thrusting)useThruster(dt,1);
   }
 
-  // Solar gravity (visual scale)
+  // 使用固定的視覺化重力尺度；step() 會在高倍率時切成多個小步驟。
   const rs2=ship.x*ship.x+ship.y*ship.y+1200;
-  const rs=Math.sqrt(rs2);
   const sunMu=24000;
   ship.vx+=(-sunMu*ship.x/Math.pow(rs2,1.5))*dt;
   ship.vy+=(-sunMu*ship.y/Math.pow(rs2,1.5))*dt;
@@ -692,15 +733,18 @@ function updateShip(dt){
     ship.vx+=mu*dx/Math.pow(d2,1.5)*dt;
     ship.vy+=mu*dy/Math.pow(d2,1.5)*dt;
 
-    const demoSafeFlyby=ui.assist.value==='demo'&&(p.visited||p.name===targetName);
-    if(d<p.size+ship.r+2&&!demoSafeFlyby){
-      ship.dead=true;running=false;
-      ui.hud.innerHTML=`<b style="color:#ff8f98">任務失敗：撞上${p.name}</b><br>重新開始並拉高飛越距離。`;
+    const leavingSuccessfulFlyby=p.name===ship.clearedPlanet&&ship.clearanceGrace>0;
+    if(d<p.size+ship.r+2&&!leavingSuccessfulFlyby){
+      ship.dead=true;running=false;syncPauseLabel();
+      ui.hud.innerHTML=`<b style="color:#ff8f98">任務失敗：撞上${p.name}</b><br>請從行星外圍掠過，保留安全距離。`;
+      showEvent(`撞上${p.name}，任務中止`);
+      return;
     }
   }
 
   ship.x+=ship.vx*dt;ship.y+=ship.vy*dt;
   missionTime+=dt*.7;
+  ship.clearanceGrace=Math.max(0,ship.clearanceGrace-dt);
 
   if(trail.length===0||Math.hypot(ship.x-trail[trail.length-1].x,ship.y-trail[trail.length-1].y)>5){
     trail.push({x:ship.x,y:ship.y});
@@ -711,12 +755,32 @@ function updateShip(dt){
   const tgt=targetPlanet();
   if(tgt){
     const d=Math.hypot(tgt.x-ship.x,tgt.y-ship.y);
-    const arrivalRadius=ui.assist.value==='demo'?Math.max(92,tgt.size+70):Math.max(30,tgt.size+20);
-    if(d<arrivalRadius){
-      tgt.visited=true;
-      lastTargetName=targetName;
-      targetName=chooseRandomTarget(lastTargetName);
-      renderTarget();
+    const demoFlybyRadius=Math.max(tgt.size+60,76);
+    const arrivalRadius=ui.assist.value==='demo'?demoFlybyRadius:Math.max(30,tgt.size+20);
+    if(d<ship.closestApproach){
+      ship.closestApproach=d;ship.closestPlanet=tgt.name;
+    }
+    if(!ship.approachSpeed&&d<arrivalRadius*2.8){
+      ship.approachSpeed=Math.hypot(ship.vx,ship.vy);
+      ship.approachEnergy=solarEnergy();
+    }
+    if(!targetEntered&&d<arrivalRadius){
+      // 安全飛掠半徑是本遊戲的完成門檻；進入後立即換航點並給短暫離場寬限，
+      // 避免高時間倍率的離散步長把已成功的飛掠誤判成撞擊。
+      targetEntered=true;tgt.visited=true;
+      const exitSpeed=Math.hypot(ship.vx,ship.vy);
+      const delta=exitSpeed-(ship.approachSpeed||exitSpeed);
+      ship.lastBoost=delta;
+      // 成功助推代表安全完成一次飛掠；速度變慢也可能是有意的減速助推。
+      ship.boosts+=1;
+      showEvent(`${tgt.name}飛掠成功 · 速度變化 ${delta>=0?'+':''}${delta.toFixed(1)} · 重力助推 ${ship.boosts} 次`);
+      missionIndex+=1;targetEntered=false;ship.closestApproach=Infinity;ship.approachSpeed=0;ship.approachEnergy=0;ship.clearedPlanet=tgt.name;ship.clearanceGrace=2.2;
+      renderTarget();renderChecklist();
+      if(missionIndex>=route.length){
+        finished=true;running=false;syncPauseLabel();
+        ui.hud.innerHTML='<b style="color:#72f1b8">任務完成！</b><br>你完成了木星至冥王星的大巡航，主要推進來自行星重力助推。';
+        showEvent('大巡航完成 · 航海家號抵達冥王星');
+      }
     }
   }
 
@@ -857,16 +921,19 @@ function drawTargetArrow(){
 function updateTelemetry(){
   const speed=Math.hypot(ship.vx,ship.vy);
   const tgt=targetPlanet();
-  const targetText=tgt?`${tgt.name}（距離 ${Math.hypot(tgt.x-ship.x,tgt.y-ship.y).toFixed(0)}）`:'載入中';
-  if(!ship.dead){
-    const modeText=ui.assist.value==='demo'?`<br>全自動展示：${demo.phase}，會自動使用少量推進劑修正掠飛。`:'';
+  const targetText=tgt?`${tgt.name}（距離 ${Math.hypot(tgt.x-ship.x,tgt.y-ship.y).toFixed(0)}）`:'任務完成';
+  if(!ship.dead&&!finished){
+    const modeText=ui.assist.value==='demo'?`<br>展示模式：${demo.phase}，仍須保持安全飛掠距離。`:'';
     const cameraText=firstPerson?'<br>第一視角：鏡頭位於太空梭上，沿船頭方向觀察前方。':'';
-    ui.hud.innerHTML=`<b>下一個目標：${targetText}</b><br>讓綠色箭頭保持在前方，接近行星後從旁邊掠過。${modeText}${cameraText}`;
+    ui.hud.innerHTML=`<b>下一航點：${targetText}</b><br>綠色箭頭是目標方向；靠近後從側面掠過，讓重力替你轉彎。${modeText}${cameraText}`;
   }
   ui.speed.textContent=speed.toFixed(1);
   ui.fuel.textContent=ship.fuel.toFixed(0)+'%';
   ui.fuelUsed.textContent=ship.fuelUsed.toFixed(1)+'%';
   ui.burnRate.textContent=demo.burnRate.toFixed(1)+'%/年';
+  ui.closest.textContent=Number.isFinite(ship.closestApproach)?ship.closestApproach.toFixed(0):'—';
+  ui.energy.textContent=solarEnergy().toFixed(0);
+  ui.boosts.textContent=`${ship.boosts} 次`;
   ui.missionTime.textContent=missionTime.toFixed(1)+' 年';
 }
 
@@ -978,13 +1045,18 @@ function draw(){
 }
 
 function step(t){
-  const dt=Math.min((t-last)/1000,.035)*Number(ui.timeScale.value);last=t;
+  const simDt=Math.min((t-last)/1000,.035)*Number(ui.timeScale.value);last=t;
   if(running){
-    updatePlanets(dt);
-    updateShip(dt);
-    camera.x+=(ship.x-camera.x)*Math.min(1,dt*3);
-    camera.y+=(ship.y-camera.y)*Math.min(1,dt*3);
-    camera.zoom+=(Number(ui.zoom.value)-camera.zoom)*Math.min(1,dt*5);
+    const substeps=Math.max(1,Math.ceil(simDt/.028));
+    const dt=simDt/substeps;
+    for(let i=0;i<substeps;i++){
+      updatePlanets(dt);
+      updateShip(dt);
+      if(ship.dead||finished)break;
+    }
+    camera.x+=(ship.x-camera.x)*Math.min(1,simDt*3);
+    camera.y+=(ship.y-camera.y)*Math.min(1,simDt*3);
+    camera.zoom+=(Number(ui.zoom.value)-camera.zoom)*Math.min(1,simDt*5);
   }
   draw();requestAnimationFrame(step);
 }
@@ -999,18 +1071,18 @@ holdButton(ui.left,'ArrowLeft');holdButton(ui.right,'ArrowRight');holdButton(ui.
 
 addEventListener('keydown',e=>{
   if(['ArrowLeft','ArrowRight','ArrowUp',' ','w','a','d','W','A','D'].includes(e.key))e.preventDefault();
-  if(e.key===' '){running=!running;ui.pause.textContent='STOP/CONTINUE';}
+  if(e.key===' '){running=!running;syncPauseLabel();}
   else keys[e.key]=true;
 });
 addEventListener('keyup',e=>keys[e.key]=false);
 
-ui.pause.onclick=()=>{running=!running;ui.pause.textContent='STOP/CONTINUE'};
+ui.pause.onclick=()=>{if(!ship.dead&&!finished){running=!running;syncPauseLabel();}};
 ui.timeScale.oninput=()=>ui.timeVal.textContent=Number(ui.timeScale.value).toFixed(1)+'×';
 ui.zoom.oninput=()=>ui.zoomVal.textContent=Number(ui.zoom.value).toFixed(2)+'×';
 ui.assist.onchange=()=>{
   if(ui.assist.value==='demo'){
     running=true;
-    ui.pause.textContent='STOP/CONTINUE';
+    syncPauseLabel();
     ui.timeScale.value='5';ui.timeScale.oninput();
     ui.zoom.value='0.85';ui.zoom.oninput();
   }
@@ -1021,11 +1093,14 @@ ui.cameraMode.onclick=()=>{
   ui.cameraMode.textContent=firstPerson?'切換為第三視角':'切換為第一視角';
 };
 ui.skip.onclick=()=>{
-  const tgt=targetPlanet();if(!tgt)return;
+  const tgt=targetPlanet();if(!tgt||ship.dead||finished)return;
   const tangent=Math.atan2(tgt.vy,tgt.vx);
-  ship.x=tgt.x-Math.cos(tangent)*55;ship.y=tgt.y-Math.sin(tangent)*55;
+  const safeDistance=Math.max(tgt.size+58,72);
+  ship.x=tgt.x-Math.cos(tangent)*safeDistance;ship.y=tgt.y-Math.sin(tangent)*safeDistance;
   ship.vx=tgt.vx+Math.cos(tangent)*35;ship.vy=tgt.vy+Math.sin(tangent)*35;
-  trail=[];camera.x=ship.x;camera.y=ship.y;
+  ship.angle=Math.atan2(ship.vy,ship.vx);ship.closestApproach=Infinity;ship.approachSpeed=0;targetEntered=false;ship.clearedPlanet='';ship.clearanceGrace=0;
+  trail=[];trailDirty=true;camera.x=ship.x;camera.y=ship.y;
+  showEvent(`已定位至${tgt.name}外圍，練習安全飛掠`);
 };
 function cursorOnOrbitalPlane(e){
   if(!camera3d||!raycaster3d)return null;
