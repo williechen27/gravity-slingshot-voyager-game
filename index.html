@@ -3,594 +3,463 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>航海家號：太陽系引力彈弓任務｜3D game_3</title>
+<title>航海家號：太陽系引力彈弓任務｜Voyager Slingshot</title>
 <style>
+:root{
+  --bg:#030712;
+  --text:#f0f7ff;--muted:#8faec7;--cyan:#38bdf8;--cyan-glow:rgba(56,189,248,.35);
+  --yellow:#fbbf24;--yellow-glow:rgba(251,191,36,.35);
+  --green:#34d399;--green-glow:rgba(52,211,153,.35);
+  --red:#f87171;--red-glow:rgba(248,113,113,.4);
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  margin:0;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;
+  background:radial-gradient(circle at 50% 30%,#0e2644 0,#030814 55%,#010206 100%);
+  user-select:none;
+}
+header,footer{display:none}
 
-:root {
-  color-scheme: dark;
-  --bg: #050a14;
-  --surface: #0b1220;
-  --surface-raised: #101a2a;
-  --line: rgba(128, 165, 198, 0.18);
-  --line-strong: rgba(0, 204, 255, 0.32);
-  --text: #e7eff8;
-  --muted: #8fa4b9;
-  --cyan: #35d8ff;
-  --cyan-soft: #9beeff;
-  --purple: #a78bfa;
-  --green: #51e0ae;
-  --yellow: #f6c96b;
-  --red: #ff7c8a;
+main{position:relative;width:100vw;height:100dvh;margin:0;padding:0;overflow:hidden}
+.stage{position:fixed;inset:0;width:100vw;height:100dvh;border:0;overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#spaceFallback{position:absolute;inset:0;z-index:0;pointer-events:none}
+#labelOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+
+/* ================= 通透全像四角 HUD 架構 (無笨重背景) ================= */
+.hud-corner{
+  position:absolute;z-index:5;background:transparent;border:0;box-shadow:none;
+  text-shadow:0 2px 10px rgba(0,0,0,.92),0 0 20px rgba(0,0,0,.8);
+  pointer-events:auto;
 }
 
-* { box-sizing: border-box; }
-html, body { width: 100%; height: 100%; margin: 0; }
-body {
-  overflow: hidden;
-  color: var(--text);
-  background: var(--bg);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+/* --- 左上角：任務目標與航點進度 --- */
+.hud-corner.top-left{
+  top:18px;left:22px;max-width:320px;pointer-events:none;
 }
-button, select, input { font: inherit; }
-button { color: inherit; }
-.mission-console {
-  display: grid;
-  grid-template-columns: minmax(248px, 270px) minmax(0, 1fr) minmax(270px, 300px);
-  grid-template-rows: 64px minmax(0, 1fr) 132px;
-  gap: 12px;
-  width: 100vw;
-  height: 100dvh;
-  padding: 12px;
-  background: radial-gradient(ellipse at 54% 45%, #0b1930 0, #050a14 68%);
+.mission-tag{
+  display:inline-block;font-size:10px;letter-spacing:1.8px;font-weight:800;
+  text-transform:uppercase;color:var(--cyan);background:rgba(56,189,248,.12);
+  border:1px solid rgba(56,189,248,.35);padding:2px 8px;border-radius:4px;margin-bottom:6px;
 }
-.mission-header {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(250px, 1fr) minmax(240px, 1.2fr) auto;
-  align-items: center;
-  gap: 18px;
-  min-width: 0;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: linear-gradient(110deg, rgba(14, 24, 40, .96), rgba(8, 14, 25, .96));
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+.target-row{display:flex;align-items:baseline;gap:8px}
+.target-label{font-size:12px;color:var(--muted);letter-spacing:.5px}
+.target-name{
+  font-size:28px;font-weight:900;color:var(--yellow);
+  text-shadow:0 0 16px var(--yellow-glow),0 2px 8px rgba(0,0,0,.9);
 }
-.brand-group { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  border: 1px solid rgba(53, 216, 255, .42);
-  border-radius: 50%;
-  color: var(--cyan);
-  font: 700 15px ui-monospace, SFMono-Regular, Consolas, monospace;
-  box-shadow: inset 0 0 12px rgba(53, 216, 255, .1);
+.hud-text{
+  font-size:12px;line-height:1.6;color:#d5ebfd;margin-top:6px;max-width:300px;
 }
-.brand-copy { min-width: 0; }
-.brand-copy h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .08em; white-space: nowrap; }
-.eyebrow {
-  margin: 0 0 3px;
-  color: var(--cyan);
-  font: 600 9px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .16em;
+.hud-text b{color:var(--cyan);font-weight:700}
+.checklist-nodes{
+  display:flex;align-items:center;gap:12px;position:relative;
+  margin:12px 0 0;padding:0;list-style:none;
 }
-.mission-name { display: grid; gap: 3px; text-align: center; }
-.mission-name span, .status-copy span { color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
-.mission-name strong { font-size: 13px; font-weight: 550; }
-.status-group { display: flex; align-items: center; gap: 9px; min-width: 150px; }
-.status-light {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 10px rgba(81, 224, 174, .65);
+.node-item{
+  display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);
+  transition:all .2s;
 }
-.status-copy { display: grid; gap: 3px; }
-.status-copy strong { color: var(--green); font-size: 12px; font-weight: 600; }
-.education-label { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.node-dot{
+  width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.2);
+  border:1.5px solid rgba(255,255,255,.4);transition:all .25s;
+}
+.node-item.active .node-dot{
+  border-color:var(--yellow);background:var(--yellow);
+  box-shadow:0 0 10px var(--yellow);transform:scale(1.25);
+}
+.node-item.active{color:var(--yellow);font-weight:700}
+.node-item.done .node-dot{
+  border-color:var(--green);background:var(--green);
+  box-shadow:0 0 6px var(--green-glow);
+}
+.node-item.done{color:var(--green)}
 
-.panel {
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: linear-gradient(160deg, rgba(13, 22, 37, .97), rgba(8, 14, 24, .97));
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .24);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(53, 216, 255, .28) transparent;
+/* --- 右上角：遙測飛行數據 (垂直通透分佈) --- */
+.hud-corner.top-right{
+  top:18px;right:22px;min-width:215px;text-align:right;
 }
-.flight-controls { grid-column: 1; grid-row: 2; padding: 13px; }
-.telemetry-panel { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; gap: 10px; padding: 13px; }
-.panel-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
+.corner-header{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:10px;
 }
-.panel-heading h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
-.panel-code { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
-.control-section, .telemetry-block, .mission-panel {
-  padding: 11px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, .025);
+.telemetry-tag{
+  font-size:10px;letter-spacing:1.8px;font-weight:800;color:var(--muted);
 }
-.control-section + .control-section { margin-top: 10px; }
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 10px;
-  color: #bdcbd9;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.hud-btn-mini{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);
+  color:var(--text);border-radius:6px;padding:3px 10px;font-size:11.5px;font-weight:600;
+  cursor:pointer;backdrop-filter:blur(6px);transition:all .18s;
 }
-.direction-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 40px);
-  grid-template-rows: repeat(2, 36px);
-  justify-content: center;
-  gap: 5px;
-  margin: 3px 0 10px;
-}
-#thrust { grid-column: 2; grid-row: 1; }
-#left { grid-column: 1; grid-row: 2; }
-#right { grid-column: 3; grid-row: 2; }
-button {
-  min-height: 34px;
-  padding: 7px 9px;
-  border: 1px solid rgba(112, 151, 185, .28);
-  border-radius: 6px;
-  background: #111d2d;
-  color: #dce8f3;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
-}
-button:hover { border-color: rgba(53, 216, 255, .55); background: #17283b; }
-button:active { background: #0c1725; }
-button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-.direction-pad button { min-height: 36px; padding: 0; color: var(--cyan); font-size: 18px; }
-.engine-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.engine-toggle { border-color: rgba(81, 224, 174, .42); color: var(--green); }
-.engine-toggle[aria-pressed="true"] { background: rgba(28, 100, 78, .38); box-shadow: inset 0 0 0 1px rgba(81, 224, 174, .16); }
-.pause-control { width: 100%; }
-.engine-actions button {
-  border-color: rgba(117, 190, 220, .3);
-  background: linear-gradient(180deg, rgba(28, 43, 59, .98), rgba(11, 20, 32, .98));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 0 rgba(0, 0, 0, .45);
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
-}
-.engine-actions .engine-toggle {
-  border-color: rgba(81, 224, 174, .48);
-  background: linear-gradient(180deg, rgba(24, 64, 58, .72), rgba(10, 30, 32, .96));
-  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .1), 0 2px 0 rgba(0, 0, 0, .45), 0 0 10px rgba(81, 224, 174, .08);
-}
-.engine-actions .engine-toggle[aria-pressed="true"] {
-  background: linear-gradient(180deg, rgba(37, 105, 79, .82), rgba(12, 46, 38, .98));
-  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .14), 0 2px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(81, 224, 174, .2);
-}
-.engine-actions .pause-control { border-color: rgba(53, 216, 255, .42); }
-.engine-actions button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(91, 224, 255, .78);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 3px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(53, 216, 255, .2);
-}
-.engine-actions .engine-toggle:hover:not(:disabled) {
-  border-color: rgba(112, 255, 202, .8);
-  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .14), 0 3px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(81, 224, 174, .22);
-}
-.engine-actions button:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .35), 0 0 6px rgba(53, 216, 255, .12);
-}
-.engine-actions button:disabled { cursor: not-allowed; opacity: .55; }
-.setting-list { display: grid; gap: 10px; }
-.setting-field label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.setting-field label b { color: var(--cyan); font: 600 11px ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
-input[type="range"] { display: block; width: 100%; height: 17px; margin: 0; appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer; }
-input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: #344253; }
-input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; background: #344253; }
-input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--cyan); }
-input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -5px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(53, 216, 255, .4); }
-input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(53, 216, 255, .4); }
-select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba(112, 151, 185, .25); border-radius: 5px; background: #0d1724; color: var(--text); font-size: 11px; }
-.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
-#cameraMode { grid-column: 1 / -1; }
+.hud-btn-mini:hover{background:rgba(56,189,248,.25);border-color:var(--cyan);color:#fff}
 
-.mission-panel { border-color: rgba(167, 139, 250, .22); }
-.mission-title { color: var(--muted); font-size: 10px; }
-.target-name { margin-top: 4px; color: var(--cyan); font-size: 19px; font-weight: 650; }
-.mission-brief { margin-top: 6px; color: #b8c7d6; font-size: 10px; line-height: 1.45; }
-.hud { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.45; }
-.hud b { color: var(--text); }
-
-.telemetry-block { padding: 10px; }
-.telemetry-block-heading { display: flex; justify-content: space-between; align-items: center; margin: 0 0 9px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
-.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-.stat { min-width: 0; padding: 8px; border: 1px solid rgba(112, 151, 185, .14); border-radius: 5px; background: rgba(3, 8, 15, .45); }
-.stat span { display: block; color: var(--muted); font-size: 9px; line-height: 1.3; }
-.stat b { display: block; margin-top: 4px; color: var(--cyan); font: 600 13px ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat .unit { display: inline; margin-left: 3px; color: var(--muted); font-size: 9px; }
-.resource-meter { display: block; width: 100%; height: 5px; margin-top: 7px; border: 0; border-radius: 4px; overflow: hidden; background: #202d3b; }
-.resource-meter::-webkit-progress-bar { background: #202d3b; }
-.resource-meter::-webkit-progress-value { border-radius: 4px; background: linear-gradient(90deg, #167e9b, var(--cyan)); }
-.resource-meter::-moz-progress-bar { border-radius: 4px; background: linear-gradient(90deg, #167e9b, var(--cyan)); }
-.power-meter::-webkit-progress-value, .power-meter::-moz-progress-bar { background: linear-gradient(90deg, #6954b6, var(--purple)); }
-.data-notice { margin: 8px 1px 0; color: #71859a; font-size: 9px; line-height: 1.4; }
-
-.flight-log { grid-column: 1 / -1; grid-row: 3; min-height: 0; padding: 10px 13px; border: 1px solid var(--line); border-radius: 9px; background: rgba(9, 15, 26, .95); }
-.log-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 7px; }
-.log-header h2 { margin: 0; color: #c7d4e1; font-size: 11px; font-weight: 600; letter-spacing: .1em; }
-.log-header span { color: var(--muted); font-size: 9px; }
-.flight-log-list { display: grid; gap: 4px; max-height: 78px; overflow-y: auto; margin: 0; padding: 0; list-style: none; scrollbar-width: thin; }
-.log-entry { display: grid; grid-template-columns: 72px 1fr; gap: 8px; color: #b9c7d5; font-size: 10px; line-height: 1.35; }
-.log-entry time { color: #71879b; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
-.log-entry.warning span { color: var(--yellow); }
-.log-entry.error span { color: var(--red); }
-.log-entry.success span { color: var(--green); }
-.log-entry.control span { color: var(--cyan-soft); }
-.learning-content { width: min(100% - 24px, 1100px); margin: 16px auto 32px; color: var(--text); }
-.learning-content > summary { width: fit-content; padding: 9px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; cursor: pointer; }
-.learning-content[open] > .card { margin-top: 10px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
-.learning-content .learn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-
-.stage { grid-column: 2; grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid rgba(76, 118, 155, .25); border-radius: 9px; background: #02050b; }
-.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
-.stage-tools { position: absolute; z-index: 4; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; pointer-events: none; }
-.stage-tools span { color: #8ea4b9; font-size: 10px; text-shadow: 0 1px 4px #000; }
-.stage-tools button { padding: 7px 10px; border: 1px solid rgba(99, 220, 255, .35); border-radius: 6px; background: rgba(7, 17, 29, .88); color: #c7e7f4; font: inherit; font-size: 10px; cursor: pointer; pointer-events: auto; }
-.stage-tools button:hover { border-color: rgba(99, 220, 255, .7); background: rgba(10, 35, 51, .95); }
-#spaceFallback { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.event-banner { position: absolute; z-index: 5; top: 16px; left: 50%; max-width: calc(100% - 28px); padding: 9px 13px; border: 1px solid rgba(81, 224, 174, .45); border-radius: 7px; background: rgba(5, 18, 28, .92); color: var(--green); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
-.event-banner.show { opacity: 1; }
-.education-tag { position: absolute; right: 10px; bottom: 9px; padding: 5px 8px; border: 1px solid rgba(128, 165, 198, .17); border-radius: 5px; background: rgba(5, 10, 20, .68); color: #879aae; font-size: 9px; pointer-events: none; }
-
-@media (max-width: 1100px) {
-  .mission-console { grid-template-columns: minmax(205px, 230px) minmax(0, 1fr); grid-template-rows: 60px minmax(280px, 1fr) auto 120px; }
-  .mission-header { grid-column: 1 / -1; grid-row: 1; }
-  .flight-controls { grid-column: 1; grid-row: 2; }
-  .stage { grid-column: 2; grid-row: 2; }
-  .telemetry-panel { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(200px, .8fr) minmax(0, 1.2fr); align-items: start; }
-  .telemetry-panel > .panel-heading { grid-column: 1 / -1; }
-  .telemetry-panel > .mission-panel { grid-column: 1; }
-  .telemetry-panel > .telemetry-block { grid-column: 2; grid-row: 2 / span 2; }
-  .telemetry-panel > .data-notice { grid-column: 1; }
-  .flight-log { grid-column: 1 / -1; grid-row: 4; }
-  .flight-log-list { max-height: 68px; }
+.stats-grid{
+  display:flex;flex-direction:column;gap:5px;align-items:stretch;
 }
-@media (max-width: 700px) {
-  html, body { height: auto; min-height: 100%; overflow: auto; }
-  .mission-console { width: 100%; height: auto; min-height: 100dvh; overflow: visible; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(320px, 48dvh) auto auto auto; gap: 9px; padding: 9px; }
-  .mission-header { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px; }
-  .brand-copy h1 { font-size: 12px; white-space: normal; }
-  .brand-mark { width: 29px; height: 29px; flex-basis: 29px; }
-  .mission-name { display: none; }
-  .education-label { display: none; }
-  .status-group { min-width: 0; }
-  .stage { grid-column: 1; grid-row: 2; min-height: 320px; }
-  .flight-controls { grid-column: 1; grid-row: 3; }
-  .telemetry-panel { grid-column: 1; grid-row: 4; display: flex; }
-  .telemetry-panel > .telemetry-block { order: 2; }
-  .telemetry-panel > .mission-panel { order: 1; }
-  .telemetry-panel > .data-notice { order: 3; }
-  .flight-log { grid-column: 1; grid-row: 5; min-height: 130px; }
-  .flight-log-list { max-height: 78px; }
-  .learning-content { width: calc(100% - 18px); margin-top: 10px; }
-  .learning-content[open] > .card { padding: 14px; }
+.stat-item{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  border-bottom:1px solid rgba(255,255,255,.07);padding:2px 0 4px;
+}
+.stat-lbl{font-size:11px;color:var(--muted);letter-spacing:.3px;white-space:nowrap}
+.stat-val{
+  font-size:15px;font-family:monospace;letter-spacing:.3px;color:#edf7ff;text-align:right;
+}
+
+/* --- 左下角：鍵盤操作提示 (純淨無搖桿風) --- */
+.hud-corner.bottom-left{
+  bottom:20px;left:22px;pointer-events:none;
+}
+.key-hints{
+  font-size:11.5px;color:rgba(143,174,199,.75);line-height:1.7;
+}
+
+/* --- 中下方：暫停 / 繼續控制 (極簡低調風) --- */
+.hud-center-bottom{
+  position:absolute;z-index:5;left:50%;bottom:20px;transform:translateX(-50%);
+  pointer-events:auto;opacity:.38;transition:opacity .25s ease,transform .2s;
+}
+.hud-center-bottom:hover{opacity:.95;transform:translateX(-50%) translateY(-1px)}
+.pause-control{
+  width:auto;min-width:120px;height:32px;padding:0 14px;font-size:11.5px;font-weight:600;
+  letter-spacing:.6px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(237,247,255,.85);
+  backdrop-filter:blur(6px);cursor:pointer;transition:all .2s;
+}
+.pause-control:hover,.pause-control:active{
+  border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.1);
+}
+
+/* --- 右下角：系統調整與操作設定 --- */
+.hud-corner.bottom-right{
+  bottom:20px;right:22px;width:240px;text-align:right;
+}
+.controls-list{display:flex;flex-direction:column;gap:8px}
+.ctrl-row{display:flex;flex-direction:column;gap:3px}
+.ctrl-row label{
+  display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted);
+}
+.ctrl-row label b{font-size:12.5px;font-family:monospace;color:var(--text)}
+input[type=range]{
+  width:100%;height:4px;accent-color:var(--cyan);background:rgba(255,255,255,.15);
+  border-radius:2px;cursor:pointer;outline:none;
+}
+select{
+  width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(8,18,34,.7);color:var(--text);font-size:12px;cursor:pointer;outline:none;
+  backdrop-filter:blur(8px);
+}
+.actions-row{display:flex;gap:5px;margin-top:4px}
+.action-btn{
+  flex:1;padding:6px 2px;border-radius:6px;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);color:var(--text);font-size:11px;font-weight:600;
+  cursor:pointer;backdrop-filter:blur(6px);transition:all .18s;white-space:nowrap;
+}
+.action-btn:hover{
+  background:rgba(56,189,248,.25);border-color:var(--cyan);
+}
+.btn-launch-highlight{
+  background:linear-gradient(135deg, rgba(56,189,248,.35), rgba(52,211,153,.35));
+  border-color:rgba(56,189,248,.6);
+  color:#fff;
+  font-weight:700;
+  box-shadow:0 0 10px rgba(56,189,248,.25);
+}
+.btn-launch-highlight:hover{
+  background:linear-gradient(135deg, rgba(56,189,248,.58), rgba(52,211,153,.58));
+  border-color:var(--cyan);
+  box-shadow:0 0 16px var(--cyan-glow);
+}
+
+/* 事件通知橫幅 */
+.event-banner{
+  position:absolute;z-index:6;left:50%;top:20px;transform:translateX(-50%) translateY(-14px);
+  opacity:0;pointer-events:none;padding:8px 20px;border:1px solid rgba(52,211,153,.5);
+  border-radius:999px;background:rgba(3,18,28,.88);backdrop-filter:blur(10px);
+  color:var(--green);font-weight:700;font-size:13.5px;
+  box-shadow:0 8px 24px rgba(0,0,0,.6),0 0 16px var(--green-glow);
+  transition:all .28s cubic-bezier(.17,.89,.32,1.28);white-space:nowrap;
+}
+.event-banner.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ================= 開始頁面 (極簡太空美學 Minimalist Start Screen) ================= */
+.start-screen{
+  position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 50%,rgba(3,10,24,.35) 0,rgba(1,3,8,.85) 100%);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:opacity .6s cubic-bezier(.16,1,.3,1),visibility .6s;
+}
+.start-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.start-hero{
+  max-width:680px;width:92%;text-align:center;padding:20px;
+  animation:fadeUp .8s cubic-bezier(.16,1,.3,1);
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.start-eyebrow{
+  font-size:11px;letter-spacing:6px;font-weight:600;text-transform:uppercase;
+  color:var(--cyan);opacity:.85;margin-bottom:14px;
+}
+.start-title{
+  font-size:clamp(44px,8.5vw,78px);font-weight:200;letter-spacing:14px;margin:0;
+  text-transform:uppercase;color:#fff;
+  text-shadow:0 0 30px rgba(255,255,255,.3),0 2px 14px rgba(0,0,0,.9);
+}
+.start-subtitle{
+  font-size:clamp(13px,2.2vw,16px);font-weight:400;letter-spacing:4px;
+  color:var(--yellow);margin-top:10px;opacity:.95;
+  text-shadow:0 0 16px var(--yellow-glow);
+}
+.start-quote{
+  font-size:13px;font-weight:300;letter-spacing:1px;color:#a4c2db;
+  margin:22px auto 38px;max-width:440px;line-height:1.8;
+}
+
+.start-actions{display:flex;flex-direction:column;align-items:center;gap:18px}
+.btn-minimal-launch{
+  display:inline-flex;align-items:center;gap:12px;
+  padding:14px 44px;border-radius:999px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.38);
+  color:#fff;font-size:15px;font-weight:500;letter-spacing:3px;
+  cursor:pointer;backdrop-filter:blur(8px);
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  transition:all .3s cubic-bezier(.16,1,.3,1);
+}
+.btn-minimal-launch svg{transition:transform .3s ease}
+.btn-minimal-launch:hover{
+  background:#fff;color:#020612;border-color:#fff;
+  transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,255,255,.28);
+}
+.btn-minimal-launch:hover svg{transform:translateX(4px)}
+
+.start-sublinks{display:flex;align-items:center;gap:16px;margin-top:4px}
+.link-btn{
+  background:transparent;border:0;color:rgba(215,235,255,.65);
+  font-size:12.5px;letter-spacing:1.5px;cursor:pointer;padding:4px 6px;
+  transition:color .2s;
+}
+.link-btn:hover{color:var(--cyan);text-shadow:0 0 10px var(--cyan-glow)}
+.link-dot{color:rgba(255,255,255,.25);font-size:12px}
+
+.start-controls-hint{
+  margin-top:42px;font-size:11.5px;letter-spacing:1px;color:rgba(143,174,199,.65);
+}
+kbd{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  border-radius:4px;padding:2px 6px;font-family:inherit;color:#edf7ff;
+}
+
+/* ================= 遊戲說明彈窗 (Instructions Modal) ================= */
+.modal-overlay{
+  position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
+  background:rgba(1,4,12,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:18px;animation:fadeIn .2s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-card{
+  max-width:640px;width:100%;max-height:86dvh;display:flex;flex-direction:column;
+  border-radius:16px;background:rgba(6,16,32,.9);border:1px solid rgba(99,220,255,.28);
+  box-shadow:0 24px 60px rgba(0,0,0,.7);overflow:hidden;
+}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.09);
+}
+.modal-header h2{margin:0;font-size:17px;font-weight:800;color:var(--cyan);display:flex;align-items:center;gap:6px}
+.modal-close-btn{
+  background:transparent;border:0;color:var(--muted);font-size:18px;
+  cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .18s;
+}
+.modal-close-btn:hover{color:#fff}
+.modal-body{padding:20px;overflow-y:auto;line-height:1.65;color:#d2e5f5;font-size:13px}
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.guide-item{
+  background:rgba(3,10,20,.6);border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;padding:12px;
+}
+.guide-item h3{margin:0 0 5px;font-size:13.5px;color:#fff;display:flex;align-items:center;gap:6px}
+.guide-item p{margin:0;font-size:12px;color:#a9c6dc}
+.guide-footer-tip{
+  background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);
+  border-radius:8px;padding:10px 14px;color:#cbf8e5;font-size:12px;
+}
+.modal-footer{
+  padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;justify-content:flex-end;gap:10px;background:rgba(3,8,18,.4);
+}
+
+@media(max-width:768px){
+  .hud-corner.top-right{top:12px;right:14px}
+  .hud-corner.top-left{top:12px;left:14px;max-width:240px}
+  .hud-corner.bottom-left{bottom:14px;left:14px}
+  .hud-corner.bottom-right{bottom:14px;right:14px;width:180px}
+  .guide-grid{grid-template-columns:1fr}
+  .stats-grid{gap:3px}
+  .stat-val{font-size:13.5px}
+  .stat-lbl{font-size:10px}
 }
 </style>
 </head>
 <body>
-<main class="mission-console">
-  <header class="mission-header">
-    <div class="brand-group">
-      <div class="brand-mark" aria-hidden="true">V</div>
-      <div class="brand-copy">
-        <p class="eyebrow">DEEP SPACE NAVIGATION</p>
-        <h1>VOYAGER MISSION CONTROL</h1>
+
+<main>
+  <section class="stage">
+    <canvas id="space"></canvas>
+    <canvas id="labelOverlay"></canvas>
+
+    <!-- 事件通知橫幅 (Top Center) -->
+    <div class="event-banner" id="eventBanner" aria-live="polite"></div>
+
+    <!-- 左上角：任務目標與航點進度 (Top-Left HUD) -->
+    <div class="hud-corner top-left">
+      <div class="mission-tag">VOYAGER GRAND TOUR</div>
+      <div class="target-row">
+        <span class="target-label">下一目標</span>
+        <span id="targetName" class="target-name">木星</span>
+      </div>
+      <div id="hud" class="hud-text">綠色箭頭指示目標方位；從側面掠過即可借力。</div>
+      <ul class="checklist-nodes" id="checklistNodes">
+        <li class="node-item active" data-name="木星"><div class="node-dot"></div><span>木星</span></li>
+        <li class="node-item" data-name="土星"><div class="node-dot"></div><span>土星</span></li>
+        <li class="node-item" data-name="天王星"><div class="node-dot"></div><span>天王</span></li>
+        <li class="node-item" data-name="海王星"><div class="node-dot"></div><span>海王</span></li>
+        <li class="node-item" data-name="冥王星"><div class="node-dot"></div><span>冥王</span></li>
+      </ul>
+    </div>
+
+    <!-- 右上角：遙測實時數據 (Top-Right HUD) -->
+    <div class="hud-corner top-right">
+      <div class="corner-header">
+        <span class="telemetry-tag">TELEMETRY</span>
+        <button id="btnManualHeader" class="hud-btn-mini" title="飛行指南手冊">📖 說明</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item"><span class="stat-lbl">航速</span><b id="speed" class="stat-val">0</b></div>
+        <div class="stat-item"><span class="stat-lbl">推進劑</span><b id="fuel" class="stat-val" style="color:var(--cyan)">100%</b></div>
+        <div class="stat-item"><span class="stat-lbl">預計最近距</span><b id="predictedClosest" class="stat-val" style="color:var(--green)">—</b></div>
+        <div class="stat-item"><span class="stat-lbl">日心能量</span><b id="energy" class="stat-val">—</b></div>
+        <div class="stat-item"><span class="stat-lbl">最近天體</span><b id="nearest" class="stat-val">地球</b></div>
+        <div class="stat-item"><span class="stat-lbl">實際最近距</span><b id="closest" class="stat-val">—</b></div>
+        <div class="stat-item"><span class="stat-lbl">助推次數</span><b id="boosts" class="stat-val" style="color:var(--yellow)">0 次</b></div>
+        <div class="stat-item"><span class="stat-lbl">任務耗時</span><b id="missionTime" class="stat-val">0.0 年</b></div>
       </div>
     </div>
-    <div class="mission-name">
-      <span>任務識別 / MISSION</span>
-      <strong>太陽系重力助推巡航模擬</strong>
-    </div>
-    <div class="status-group" role="status">
-      <span class="status-light" aria-hidden="true"></span>
-      <div class="status-copy"><span>系統狀態</span><strong id="runStatus">模擬執行中</strong></div>
-      <span class="education-label">教育模擬資料</span>
-    </div>
-  </header>
 
-  <aside class="panel flight-controls" aria-label="飛行控制面板">
-    <div class="panel-heading">
-      <div><p class="eyebrow">PILOT INPUT</p><h2>飛行控制</h2></div>
-      <span class="panel-code">01 / RCS</span>
-    </div>
-
-    <section class="control-section">
-      <h3 class="section-title"><span>姿態與推進</span><span>MANUAL</span></h3>
-      <div class="direction-pad" aria-label="方向控制">
-        <button id="thrust" type="button" aria-label="推進，W 或上方向鍵">↑</button>
-        <button id="left" type="button" aria-label="左轉，A 或左方向鍵">←</button>
-        <button id="right" type="button" aria-label="右轉，D 或右方向鍵">→</button>
+    <!-- 左下角：按鍵操作提示 (Bottom-Left HUD，無搖桿純淨風) -->
+    <div class="hud-corner bottom-left">
+      <div class="key-hints">
+        <kbd>滑鼠右鍵拖曳拉線</kbd> 轉向與推進力度 &nbsp; <kbd>W</kbd><kbd>A</kbd><kbd>D</kbd> 鍵盤微調 &nbsp; <kbd>滾輪</kbd> 縮放視野
       </div>
-      <div class="engine-actions">
-        <button id="engineToggle" class="engine-toggle" type="button" aria-pressed="false">推進器啟動</button>
-        <button id="pause" class="pause-control" type="button" aria-label="暫停或繼續，空白鍵">暫停</button>
-      </div>
-    </section>
+    </div>
 
-    <section class="control-section">
-      <h3 class="section-title"><span>飛行參數</span><span>SETUP</span></h3>
-      <div class="setting-list">
-        <div class="setting-field">
-          <label for="thrustScale"><span>推進力</span><b id="thrustVal">1.0×</b></label>
-          <input id="thrustScale" type="range" min="0.2" max="2.0" step="0.1" value="1">
+    <!-- 中下方：暫停控制 (Bottom-Center HUD) -->
+    <div class="hud-center-bottom">
+      <button id="pause" class="pause-control" aria-label="暫停或繼續，空白鍵">暫停 (Space)</button>
+    </div>
+
+    <!-- 右下角：系統調整與操作設定 (Bottom-Right HUD) -->
+    <div class="hud-corner bottom-right">
+      <div class="controls-list">
+        <div class="ctrl-row">
+          <label><span>時間倍率</span><b id="timeVal">0.50×</b></label>
+          <input id="timeScale" type="range" min="0.05" max="5.0" step="0.05" value="0.5">
         </div>
-        <div class="setting-field">
-          <label for="timeScale"><span>時間倍率</span><b id="timeVal">1.0×</b></label>
-          <input id="timeScale" type="range" min="0.3" max="5" step="0.1" value="1">
+        <div class="ctrl-row">
+          <label><span>視野縮放</span><b id="zoomVal">0.80×</b></label>
+          <input id="zoom" type="range" min="0.005" max="200.0" step="0.005" value="0.8">
         </div>
-        <div class="setting-field">
-          <label for="zoom"><span>鏡頭縮放</span><b id="zoomVal">1.0×</b></label>
-          <input id="zoom" type="range" min="0.45" max="2.2" step="0.05" value="1">
+        <div class="ctrl-row">
+          <label><span>軌道預測</span><b id="predictVal" style="color:var(--green)">140 步</b></label>
+          <input id="predictSteps" type="range" min="0" max="240" step="20" value="140">
         </div>
-        <div class="setting-field">
-          <label for="assist"><span>飛行輔助</span></label>
+        <div class="ctrl-row">
           <select id="assist">
-            <option value="none">手動駕駛</option>
-            <option value="target">自動朝向下一目標</option>
-            <option value="demo">全自動展示模式</option>
+            <option value="none">手動駕駛模式</option>
+            <option value="target">自動朝向目標</option>
+            <option value="demo">自動展示巡航</option>
           </select>
         </div>
+        <div class="actions-row">
+          <button id="btnLaunch" type="button" class="action-btn btn-launch-highlight" title="自地球點火發射 / 主推進器加速">🚀 發射</button>
+          <button id="btnRecenter" type="button" class="action-btn" title="鎖定居中推進器小球">居中鎖定</button>
+          <button id="skip" type="button" class="action-btn">練習航點</button>
+          <button id="reset" type="button" class="action-btn">重置</button>
+        </div>
       </div>
-      <div class="quick-actions">
-        <button id="reset" type="button">重新開始</button>
-        <button id="skip" type="button">練習目前航點</button>
-        <button id="cameraMode" type="button">切換為第一視角</button>
-      </div>
-    </section>
-
-    <section class="control-section mission-progress" aria-labelledby="routeTitle">
-      <h3 id="routeTitle" class="section-title"><span>航點序列</span><span>ROUTE</span></h3>
-      <ol id="checklist"></ol>
-    </section>
-  </aside>
-
-  <section class="stage" aria-label="3D 太空場景">
-    <canvas id="space"></canvas>
-    <div class="stage-tools">
-      <span id="cameraHint">拖曳旋轉 · 滾輪縮放</span>
-      <button id="resetView" type="button" aria-label="重設太空場景視角">重設視角</button>
     </div>
-    <div class="event-banner" id="eventBanner" aria-live="polite"></div>
-    <div class="education-tag">教育模擬資料 · 非 NASA 即時遙測</div>
-  </section>
-
-  <aside class="panel telemetry-panel" aria-label="航行遙測面板">
-    <div class="panel-heading">
-      <div><p class="eyebrow">FLIGHT TELEMETRY</p><h2>航行遙測</h2></div>
-      <span class="panel-code">SIM / DATA</span>
-    </div>
-
-    <section class="mission-panel" aria-live="polite">
-      <div class="mission-title">目前目標星球</div>
-      <div id="targetName" class="target-name">載入中……</div>
-      <div id="missionPhase" class="mission-brief">靠近行星外圍，讓重力替你轉彎。</div>
-      <div id="hud" class="hud">載入任務中……</div>
-    </section>
-
-    <section class="telemetry-block" aria-labelledby="telemetryTitle">
-      <h3 id="telemetryTitle" class="telemetry-block-heading"><span>航行數據</span><span>LIVE SIM</span></h3>
-      <div class="stats">
-        <div class="stat"><span>速度</span><b id="speed">0</b><span class="unit">模擬單位</span></div>
-        <div class="stat resource-stat"><span>剩餘燃料</span><b id="fuel">100%</b><progress id="fuelMeter" class="resource-meter" max="100" value="100"></progress></div>
-        <div class="stat"><span>已耗燃料</span><b id="fuelUsed">0%</b></div>
-        <div class="stat resource-stat"><span>電力</span><b id="power">100%</b><progress id="powerMeter" class="resource-meter power-meter" max="100" value="100"></progress></div>
-        <div class="stat"><span>任務時間</span><b id="missionTime">0 年</b></div>
-        <div class="stat"><span>最近行星</span><b id="nearest">地球</b></div>
-        <div class="stat"><span>最近距離</span><b id="closest">—</b></div>
-        <div class="stat"><span>日心能量</span><b id="energy">—</b></div>
-        <div class="stat"><span>推進流量</span><b id="burnRate">0%/年</b></div>
-        <div class="stat"><span>成功助推</span><b id="boosts">0 次</b></div>
-      </div>
-    </section>
-    <p class="data-notice">所有數值均為本地教育模擬資料，並非真實 NASA 遙測。</p>
-  </aside>
-
-  <section class="flight-log" aria-label="即時飛行紀錄">
-    <div class="log-header"><h2>即時飛行紀錄 / FLIGHT LOG</h2><span>本地模擬事件</span></div>
-    <ol id="flightLog" class="flight-log-list" aria-live="polite"></ol>
   </section>
 </main>
 
-<details class="learning-content">
-  <summary>引力助推原理與延伸閱讀</summary>
-  <div class="card">
-    <h2>為什麼可以在行星之間「遊走」？</h2>
-    <p>
-      每顆行星都在繞太陽移動。當航海家號進入行星的引力範圍，它會被拉彎軌跡；
-      換到太陽參考系觀察，太空船可能從行星的公轉動能取得極少量能量，因此加速並改變方向。
-      真正的航海家 2 號就是利用木星、土星、天王星與海王星的排列，完成著名的外行星「大巡航」。
-    </p>
+<!-- ================= 開始頁面 (極簡太空美學 Minimalist Start Screen) ================= -->
+<div id="startScreen" class="start-screen">
+  <div class="start-hero">
+    <div class="start-eyebrow">NASA JET PROPULSION LABORATORY</div>
+    <h1 class="start-title">VOYAGER</h1>
+    <div class="start-subtitle">太陽系引力彈弓大巡航</div>
+    <p class="start-quote">「借力外行星強大重力彎折軌道，奔向星際邊緣的無盡航程」</p>
 
-    <div class="learn-grid">
-      <section class="learn-block">
-        <h3>引力彈弓的三個步驟</h3>
-        <ol>
-          <li>太空船先以相對速度接近一顆正在公轉的行星。</li>
-          <li>行星重力會把太空船的路徑拉彎；在行星參考系中，離開速度大小近似不變，但方向改變。</li>
-          <li>回到太陽參考系後，太空船速度向量和行星公轉速度重新相加，於是可能加速、減速或大幅改變方向。</li>
-        </ol>
-      </section>
+    <div class="start-actions">
+      <button id="btnStartGame" class="btn-minimal-launch">
+        <span>啟航發射</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
 
-      <section class="learn-block">
-        <h3>什麼時候會加速或減速？</h3>
-        <ul>
-          <li>從行星公轉方向的後方掠過，太空船通常會取得能量，往更外側軌道前進。</li>
-          <li>從行星公轉方向的前方掠過，太空船可能把能量交還給行星，降低日心速度。</li>
-          <li>行星質量越大、飛掠越近、轉向角越大，彈弓效果通常越明顯。</li>
-          <li>實際任務必須避開大氣、環、衛星、輻射帶與撞擊風險，因此路線會經過精密計算。</li>
-        </ul>
-      </section>
-
-      <section class="learn-block">
-        <h3>常用公式與符號</h3>
-        <div class="formula-list">
-          <div class="formula">
-            <code>v_escape = sqrt(2 * mu / r)</code>
-            <span>逃逸速度。mu 是天體的標準重力參數，r 是距離天體中心的半徑。</span>
-          </div>
-          <div class="formula">
-            <code>epsilon = v^2 / 2 - mu / r</code>
-            <span>比軌道能量。epsilon 變大代表軌道能量提高，太空船能飛到更遠處。</span>
-          </div>
-          <div class="formula">
-            <code>v_sun,out = v_planet + v_inf,out</code>
-            <span>日心速度的向量相加。v_inf,out 是太空船離開行星時相對行星的遠方速度。</span>
-          </div>
-          <div class="formula">
-            <code>delta = 2 * asin(1 / (1 + rp * v_inf^2 / mu))</code>
-            <span>雙曲飛掠的近似轉向角。rp 是最近距離；越近、v_inf 越小、mu 越大，轉向越強。</span>
-          </div>
-          <div class="formula">
-            <code>Delta v_sun approx 2 * v_planet * sin(delta / 2)</code>
-            <span>理想化上限的直覺估算。真正任務還要看進出方向、任務目標與安全限制。</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="learn-block">
-        <h3>相關科學家與工程師</h3>
-        <ul>
-          <li>艾薩克・牛頓：萬有引力與運動定律是軌道力學的根基。</li>
-          <li>華特・霍曼：提出霍曼轉移軌道，讓人們能用最少能量在圓軌道間轉移。</li>
-          <li>赫爾曼・奧伯特：早期火箭與太空飛行理論先驅，奧伯特效應說明高速處點火更有效率。</li>
-          <li>蓋塔諾・克羅科：提出利用行星飛掠設計行星際路線的早期構想。</li>
-          <li>麥可・米諾維奇：在 1960 年代用電腦計算行星重力輔助路線，推動後來的大巡航設計。</li>
-          <li>蓋瑞・弗蘭德羅：指出 1970 年代外行星排列適合一次任務連續飛掠木星、土星、天王星與海王星。</li>
-          <li>朱塞佩・可倫坡：協助設計 Mariner 10 的金星重力輔助與多次水星飛掠策略。</li>
-        </ul>
-      </section>
+      <div class="start-sublinks">
+        <button id="btnOpenManual" class="link-btn">飛行手冊</button>
+        <span class="link-dot">·</span>
+        <button id="btnStartDemo" class="link-btn">示範巡航</button>
+      </div>
     </div>
 
-    <section class="learn-block">
-      <h3>影劇中的引力彈弓</h3>
-      <table class="example-table">
-        <thead>
-          <tr><th>作品</th><th>例子</th><th>和本遊戲的關係</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>《星際爭霸戰 IV：搶救未來》</td>
-            <td>船員駕駛克林貢猛禽艦繞太陽進行 slingshot，進入時間旅行劇情。</td>
-            <td>科幻效果被戲劇化，但「繞大型天體改變速度與方向」的語言和重力助推相通。</td>
-          </tr>
-          <tr>
-            <td>《星際爭霸戰：銀河飛龍》〈Booby Trap〉</td>
-            <td>畢凱艦長親自操艦，讓企業號-D 利用小行星場的重力環境逃離陷阱。</td>
-            <td>不是嚴格的行星重力助推，但很像本遊戲中借助天體環境轉向脫困的駕駛感。</td>
-          </tr>
-          <tr>
-            <td>《絕地救援》</td>
-            <td>Hermes 太空船採用「Rich Purnell maneuver」，繞地球借力返回火星救援。</td>
-            <td>劇情核心就是用重力助推替代大量燃料，讓原本不可能的救援路線變可行。</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="video-panel">
-        <h4>《絕地救援》引力彈弓片段</h4>
-        <div class="video-frame">
-          <iframe
-            src="https://www.youtube.com/embed/lcyfDRYKDJM?cc_load_policy=1&amp;cc_lang_pref=zh-Hant&amp;hl=zh-TW&amp;rel=0"
-            title="《絕地救援》引力彈弓片段"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen></iframe>
+    <div class="start-controls-hint">
+      <kbd>滑鼠右鍵拉線</kbd> 轉向與推力 &nbsp;·&nbsp; <kbd>W</kbd><kbd>A</kbd><kbd>D</kbd> 推進轉向 &nbsp;·&nbsp; <kbd>Space</kbd> 暫停
+    </div>
+  </div>
+</div>
+
+<!-- ================= 遊戲說明彈窗 (Instructions Modal) ================= -->
+<div id="instructionsModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>📖 航海家號任務指南與飛行手冊</h2>
+      <button id="btnCloseManual" class="modal-close-btn" aria-label="關閉說明">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="guide-grid">
+        <div class="guide-item">
+          <h3>🎯 任務目標</h3>
+          <p>依序掠過 <strong>木星 → 土星 → 天王星 → 海王星</strong>，最後安全抵達 <strong>冥王星</strong>。保持安全飛掠距離，切勿迎頭撞毀！</p>
+        </div>
+        <div class="guide-item">
+          <h3>🌀 引力彈弓原理</h3>
+          <p>從行星<strong>公轉方向的後方側面</strong>掠過，太空船會借取行星的公轉動能，大幅提升日心速度並偏折軌道，無需燃燒大量燃料！</p>
+        </div>
+        <div class="guide-item">
+          <h3>🕹️ 操控方式</h3>
+          <p>
+            • <strong>🚀 發射按鈕</strong>：自地球發射或主推進器點火加速<br>
+            • <strong>滑鼠右鍵拉線</strong>：即時指定轉向角度與推進力度百分比<br>
+            • <kbd>W</kbd> 或 <kbd>↑</kbd>：強化大推力引擎推進（消耗燃料）<br>
+            • <kbd>A</kbd> / <kbd>D</kbd>：轉向；<kbd>空白鍵</kbd>：暫停 / 繼續模擬
+          </p>
+        </div>
+        <div class="guide-item">
+          <h3>📈 即時未來軌道預測 (Kerbal 風格)</h3>
+          <p>
+            • <strong style="color:var(--green)">綠色預測線</strong>：飛船未來受太陽與行星引力彎曲的真實軌跡。<br>
+            • <strong style="color:var(--yellow)">金色菱形標記</strong>：預測與目標行星的最近飛掠點。<br>
+            • <strong style="color:var(--red)">紅色 ✕ 警示</strong>：預測軌跡將撞毀，請儘速點火避險！
+          </p>
         </div>
       </div>
-      <div class="small-note">影劇常會誇張化速度、時間或風險；真實任務仍要受燃料、熱防護、通訊窗口與導航誤差限制。</div>
-      <div class="small-note">3D 引擎使用 <a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a>；行星材質來自 <a href="https://solarsystemscope.com/textures/" target="_blank" rel="noopener">Solar System Scope</a>（CC BY 4.0），透過公開 GitHub 鏡像載入。</div>
-    </section>
-
-    <section class="learn-block">
-      <h3>現實中的引力彈弓任務</h3>
-      <table class="example-table">
-        <thead>
-          <tr><th>任務</th><th>飛掠天體</th><th>成果</th><th>官方簡介</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Mariner 10</td>
-            <td>金星</td>
-            <td>利用金星重力輔助前往水星，成為早期成功運用重力助推的行星任務。</td>
-            <td><a href="https://science.nasa.gov/mission/mariner-10/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>Voyager 1 / Voyager 2</td>
-            <td>木星、土星；Voyager 2 再接續天王星、海王星</td>
-            <td>外行星排列讓 Voyager 2 完成著名的大巡航，這也是本遊戲路線的主要靈感。</td>
-            <td><a href="https://science.nasa.gov/mission/voyager/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>Galileo</td>
-            <td>金星、地球、地球</td>
-            <td>以 VEEGA 路線累積前往木星所需能量。</td>
-            <td><a href="https://science.nasa.gov/mission/galileo/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>Cassini-Huygens</td>
-            <td>金星、金星、地球、木星</td>
-            <td>多次重力助推後抵達土星系統，展開長期土星探測。</td>
-            <td><a href="https://science.nasa.gov/mission/cassini/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>MESSENGER</td>
-            <td>地球、金星、多次水星</td>
-            <td>用重力助推逐步降低軌道能量，最後進入水星軌道。</td>
-            <td><a href="https://science.nasa.gov/mission/messenger/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>New Horizons</td>
-            <td>木星</td>
-            <td>借木星重力加速前往冥王星，縮短航行時間。</td>
-            <td><a href="https://science.nasa.gov/mission/new-horizons/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>Juno</td>
-            <td>地球</td>
-            <td>先回到地球附近借力，再前往木星。</td>
-            <td><a href="https://science.nasa.gov/mission/juno/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-          <tr>
-            <td>Parker Solar Probe</td>
-            <td>多次金星</td>
-            <td>不是為了飛得更遠，而是用金星重力降低近日點，逐步接近太陽。</td>
-            <td><a href="https://science.nasa.gov/mission/parker-solar-probe/" target="_blank" rel="noopener">NASA Science</a></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+      <div class="guide-footer-tip">
+        <strong>⚡ 關鍵訣竅：</strong>飛船推進劑僅有 100%，請勿全程按著推進！只需在交會前透過預測線微調角度，即可輕鬆借力橫跨太陽系。
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="btnModalUnderstood" class="btn-primary-glow" style="padding:10px 20px;font-size:14px">我準備好了，出發！</button>
+    </div>
   </div>
-</details>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -598,28 +467,37 @@ const canvas=document.getElementById('space');
 const $=id=>document.getElementById(id);
 const ui={
  hud:$('hud'),left:$('left'),right:$('right'),thrust:$('thrust'),pause:$('pause'),
- timeScale:$('timeScale'),timeVal:$('timeVal'),thrustScale:$('thrustScale'),thrustVal:$('thrustVal'),zoom:$('zoom'),zoomVal:$('zoomVal'),
+ timeScale:$('timeScale'),timeVal:$('timeVal'),zoom:$('zoom'),zoomVal:$('zoomVal'),
+ predictSteps:$('predictSteps'),predictVal:$('predictVal'),predictedClosest:$('predictedClosest'),
  assist:$('assist'),speed:$('speed'),fuel:$('fuel'),nearest:$('nearest'),
- fuelUsed:$('fuelUsed'),burnRate:$('burnRate'),missionTime:$('missionTime'),
- targetName:$('targetName'),missionPhase:$('missionPhase'),checklist:$('checklist'),
- closest:$('closest'),energy:$('energy'),boosts:$('boosts'),eventBanner:$('eventBanner'),
- reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode'),resetView:$('resetView'),engineToggle:$('engineToggle'),
- power:$('power'),powerMeter:$('powerMeter'),fuelMeter:$('fuelMeter'),runStatus:$('runStatus'),flightLog:$('flightLog')
+ closest:$('closest'),energy:$('energy'),boosts:$('boosts'),missionTime:$('missionTime'),
+ targetName:$('targetName'),checklistNodes:$('checklistNodes'),
+ eventBanner:$('eventBanner'),
+ btnLaunch:$('btnLaunch'),
+ reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode'),cameraModeSelect:$('cameraModeSelect'),
+ startScreen:$('startScreen'),btnStartGame:$('btnStartGame'),btnOpenManual:$('btnOpenManual'),
+ btnStartDemo:$('btnStartDemo'),instructionsModal:$('instructionsModal'),
+ btnCloseManual:$('btnCloseManual'),btnModalUnderstood:$('btnModalUnderstood'),
+ btnManualHeader:$('btnManualHeader')
 };
 
 let W=0,H=0,dpr=1,last=0,running=true,keys={},camera={x:0,y:0,zoom:1,pitch:.48,yaw:-.08};
 let ship,planets=[],trail=[],stars=[],missionIndex=0,missionTime=0,finished=false;
-let power=100,engineEngaged=false,fuelLowLogged=false,fuelEmptyLogged=false,powerLowLogged=false,powerEmptyLogged=false;
 const route=['木星','土星','天王星','海王星','冥王星'];
+let currentCamMode='follow'; // 'follow' (預設跟隨推進器), 'chase', 'cockpit', 'free'
 let firstPerson=false,firstPersonYaw=0,firstPersonPitch=0;
-let demo={thrusting:false,burnRate:0,phase:'巡航'};
-let targetEntered=false,lastTargetAssistDebug=0,lastTargetAssistDebugTarget='';
+let demo={thrusting:false,burnRate:0,phase:'巡航',burnTimer:0,cooldownTimer:0};
+let lastTargetName='',targetEntered=false;
 
 let renderer3d,scene3d,camera3d,textureLoader,ship3d,trail3d,trailDirty=true;
 let fallbackCanvas=null,ctx=null;
 let sun3d,planetMeshes=new Map(),planetRings=new Map(),earthClouds;
 let flameOuter3d,flameInner3d,flameLight3d,raycaster3d;
+let prediction3dLine=null,predictionImpact3d=null;
+let currentPrediction={points:[],impactInfo:null,periapsisPoint:null,minTargetDist:Infinity};
 let view3d={yaw:-.52,pitch:.62,targetX:0,targetZ:0,manualTarget:false,dragging:false,lastX:0,lastY:0};
+let labelCanvas=null,labelCtx=null;
+const rightDrag={active:false,pointerId:null,startX:0,startY:0,currentX:0,currentY:0,power:0,angle:0};
 const textureBase='https://raw.githubusercontent.com/JiayuanZhu/solar-system-viz/main/textures/';
 const planetTextures={
   水星:'2k_mercury.jpg',金星:'2k_venus_surface.jpg',地球:'2k_earth_daymap.jpg',
@@ -635,6 +513,13 @@ function resize(){
     renderer3d.setPixelRatio(dpr);renderer3d.setSize(W,H,false);
     camera3d.aspect=W/Math.max(1,H);camera3d.updateProjectionMatrix();
   }
+  if(!labelCanvas) labelCanvas=$('labelOverlay');
+  if(labelCanvas){
+    labelCanvas.width=Math.max(1,Math.round(W*dpr));
+    labelCanvas.height=Math.max(1,Math.round(H*dpr));
+    labelCtx=labelCanvas.getContext('2d');
+    labelCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
   if(fallbackCanvas){
     fallbackCanvas.width=Math.max(1,Math.round(W*dpr));
     fallbackCanvas.height=Math.max(1,Math.round(H*dpr));
@@ -645,16 +530,17 @@ function resize(){
 }
 addEventListener('resize',resize);resize();
 
+// 各天體嚴格依照真實天文 AU 軌道距離、物理半徑比例（太陽為地球 109 倍、木星 10 倍），以及克卜勒第三定律公轉週期 (T = a^1.5)
 const planetData=[
- {name:'水星',rOrbit:95,size:4,mass:.25,speed:1.55,color:'#b7aaa1',phase:.4},
- {name:'金星',rOrbit:130,size:7,mass:.55,speed:1.28,color:'#e6b96e',phase:2.1},
- {name:'地球',rOrbit:165,size:8,mass:.65,speed:1.12,color:'#53a8ff',phase:3.15},
- {name:'火星',rOrbit:215,size:6,mass:.42,speed:.91,color:'#d96f4f',phase:4.6},
- {name:'木星',rOrbit:310,size:18,mass:4.7,speed:.60,color:'#d9aa74',phase:.15},
- {name:'土星',rOrbit:405,size:15,mass:3.7,speed:.47,color:'#e8d18b',phase:1.28,ring:true},
- {name:'天王星',rOrbit:500,size:12,mass:2.1,speed:.36,color:'#8fe3e7',phase:2.55},
- {name:'海王星',rOrbit:585,size:12,mass:2.3,speed:.30,color:'#5275e8',phase:4.05},
- {name:'冥王星',rOrbit:665,size:5,mass:.22,speed:.24,color:'#c9b6a4',phase:5.45}
+  {name:'水星',rOrbit:62,size:0.12,mass:.02,speed:4.152,color:'#b7aaa1',phase:.4},
+  {name:'金星',rOrbit:116,size:0.30,mass:.15,speed:1.625,color:'#e6b96e',phase:2.1},
+  {name:'地球',rOrbit:160,size:0.32,mass:0.18,speed:1.000,color:'#53a8ff',phase:0.88},
+  {name:'火星',rOrbit:244,size:0.17,mass:.06,speed:0.532,color:'#d96f4f',phase:4.6},
+  {name:'木星',rOrbit:833,size:3.51,mass:28.0,speed:0.0843,color:'#d9aa74',phase:.15},
+  {name:'土星',rOrbit:1533,size:2.92,mass:18.0,speed:0.0340,color:'#e8d18b',phase:1.28,ring:true},
+  {name:'天王星',rOrbit:3072,size:1.27,mass:10.0,speed:0.0119,color:'#8fe3e7',phase:2.55},
+  {name:'海王星',rOrbit:4808,size:1.24,mass:11.0,speed:0.00607,color:'#5275e8',phase:4.05},
+  {name:'冥王星',rOrbit:6317,size:0.06,mass:0.8,speed:0.00403,color:'#c9b6a4',phase:5.45}
 ];
 
 function loadTexture(file){
@@ -697,28 +583,29 @@ function setup3D(){
   renderer3d.toneMapping=THREE.ACESFilmicToneMapping;
   renderer3d.toneMappingExposure=1.12;
   scene3d=new THREE.Scene();
-  camera3d=new THREE.PerspectiveCamera(48,1,.1,5000);
+  camera3d=new THREE.PerspectiveCamera(48,1,0.05,500000);
   raycaster3d=new THREE.Raycaster();
   textureLoader=new THREE.TextureLoader();textureLoader.setCrossOrigin('anonymous');
 
   scene3d.add(new THREE.AmbientLight(0x6b88a8,.28));
-  const sunLight=new THREE.PointLight(0xffe0a0,2.4,2600,1.4);sunLight.position.set(0,80,0);scene3d.add(sunLight);
+  const sunLight=new THREE.PointLight(0xffe0a0,2.6,35000,1.2);sunLight.position.set(0,80,0);scene3d.add(sunLight);
 
   const starPositions=[];
-  for(let i=0;i<900;i++){
-    const radius=1250+Math.random()*1600,theta=Math.random()*Math.PI*2,phi=Math.acos(2*Math.random()-1);
+  for(let i=0;i<1200;i++){
+    const radius=120000+Math.random()*180000,theta=Math.random()*Math.PI*2,phi=Math.acos(2*Math.random()-1);
     starPositions.push(radius*Math.sin(phi)*Math.cos(theta),radius*Math.cos(phi),radius*Math.sin(phi)*Math.sin(theta));
   }
   const starGeometry=new THREE.BufferGeometry();starGeometry.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));
-  scene3d.add(new THREE.Points(starGeometry,new THREE.PointsMaterial({color:0xbddcff,size:2.2,sizeAttenuation:true,transparent:true,opacity:.82})));
+  scene3d.add(new THREE.Points(starGeometry,new THREE.PointsMaterial({color:0xbddcff,size:3.5,sizeAttenuation:true,transparent:true,opacity:.75})));
 
   const sunMaterial=new THREE.MeshBasicMaterial({map:loadTexture('2k_sun.jpg'),color:0xffd36a});
-  sun3d=new THREE.Mesh(new THREE.SphereGeometry(34,48,32),sunMaterial);scene3d.add(sun3d);
+  sun3d=new THREE.Mesh(new THREE.SphereGeometry(0.75,32,24),sunMaterial);scene3d.add(sun3d);
   const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-  glow.scale.set(240,240,1);scene3d.add(glow);
+  glow.scale.set(5.5,5.5,1);scene3d.add(glow);
 
   for(const p of planetData){
-    const visualRadius=Math.max(5,p.size*1.22);
+    // 嚴格維持真實物理半徑比例
+    const visualRadius=p.size;
     const material=planetTextures[p.name]
       ? new THREE.MeshStandardMaterial({map:loadTexture(planetTextures[p.name]),roughness:.9,metalness:.02})
       : new THREE.MeshStandardMaterial({color:p.color,roughness:.85,metalness:.02});
@@ -726,48 +613,107 @@ function setup3D(){
     mesh.userData.planetName=p.name;scene3d.add(mesh);planetMeshes.set(p.name,mesh);
     if(p.name==='地球'){
       const cloudMaterial=new THREE.MeshStandardMaterial({map:loadTexture('2k_earth_clouds.jpg'),transparent:true,opacity:.34,depthWrite:false});
-      earthClouds=new THREE.Mesh(new THREE.SphereGeometry(visualRadius*1.035,32,24),cloudMaterial);scene3d.add(earthClouds);
+      earthClouds=new THREE.Mesh(new THREE.SphereGeometry(visualRadius*1.025,32,24),cloudMaterial);scene3d.add(earthClouds);
     }
     if(p.ring){
       const ringMaterial=new THREE.MeshStandardMaterial({map:loadTexture('2k_saturn_ring_alpha.png'),transparent:true,side:THREE.DoubleSide,depthWrite:false});
-      const ring=new THREE.Mesh(new THREE.RingGeometry(visualRadius*1.35,visualRadius*2.45,96),ringMaterial);
+      const ring=new THREE.Mesh(new THREE.RingGeometry(visualRadius*1.28,visualRadius*2.35,96),ringMaterial);
       ring.rotation.x=Math.PI/2;scene3d.add(ring);planetRings.set(p.name,ring);
     }
     const orbitPoints=[];
     for(let i=0;i<=128;i++){const a=i/128*Math.PI*2;orbitPoints.push(new THREE.Vector3(Math.cos(a)*p.rOrbit,0,Math.sin(a)*p.rOrbit));}
     const orbitGeometry=new THREE.BufferGeometry().setFromPoints(orbitPoints);
-    scene3d.add(new THREE.Line(orbitGeometry,new THREE.LineBasicMaterial({color:0x39799b,transparent:true,opacity:.28})));
+    scene3d.add(new THREE.Line(orbitGeometry,new THREE.LineBasicMaterial({color:0x1b3854,transparent:true,opacity:.08,depthWrite:false})));
   }
 
+  // 飛行器：精緻微型小球 (0.12 單位，對齊行星真實尺度)
   ship3d=new THREE.Group();
-  const shipBody=new THREE.Mesh(new THREE.ConeGeometry(6,18,16),new THREE.MeshStandardMaterial({color:0xeaf7ff,emissive:0x17334c,roughness:.42,metalness:.58}));
-  shipBody.rotation.z=-Math.PI/2;ship3d.add(shipBody);
-  const panelMaterial=new THREE.MeshStandardMaterial({color:0x3f78a2,emissive:0x07182b,roughness:.3,metalness:.65});
-  for(const z of [-8,8]){const panel=new THREE.Mesh(new THREE.BoxGeometry(8,.35,4),panelMaterial);panel.position.set(-3,0,z);ship3d.add(panel);}
-  const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,8,8),new THREE.MeshStandardMaterial({color:0xd5e8f4,metalness:.8}));
-  antenna.rotation.z=Math.PI/2;antenna.position.x=-5;ship3d.add(antenna);scene3d.add(ship3d);
-  const flameOuterMaterial=new THREE.MeshBasicMaterial({color:0xff6b2b,transparent:true,opacity:.9,blending:THREE.AdditiveBlending});
-  flameOuter3d=new THREE.Mesh(new THREE.ConeGeometry(3.8,20,16),flameOuterMaterial);
-  flameOuter3d.rotation.z=Math.PI/2;flameOuter3d.position.x=-16;ship3d.add(flameOuter3d);
-  const flameInnerMaterial=new THREE.MeshBasicMaterial({color:0xfff2a1,transparent:true,opacity:.95,blending:THREE.AdditiveBlending});
-  flameInner3d=new THREE.Mesh(new THREE.ConeGeometry(2.1,12,14),flameInnerMaterial);
-  flameInner3d.rotation.z=Math.PI/2;flameInner3d.position.x=-13;ship3d.add(flameInner3d);
-  flameLight3d=new THREE.PointLight(0xff8a3d,0,90,2);flameLight3d.position.x=-12;ship3d.add(flameLight3d);
-  flameOuter3d.visible=false;flameInner3d.visible=false;
+  const sphereMat=new THREE.MeshBasicMaterial({color:0xffffff});
+  const shipSphere=new THREE.Mesh(new THREE.SphereGeometry(0.12,16,12),sphereMat);
+  ship3d.add(shipSphere);
+
+  flameLight3d=new THREE.PointLight(0x38bdf8,0,25,2);
+  ship3d.add(flameLight3d);
+  scene3d.add(ship3d);
+
+  // 3D 未來軌跡預測線 (優雅、低對比不明顯之微光虛線)
+  const maxPredPoints=360;
+  const predPositions=new Float32Array(maxPredPoints*3);
+  const predGeom=new THREE.BufferGeometry();
+  predGeom.setAttribute('position',new THREE.BufferAttribute(predPositions,3));
+  const predMat=new THREE.LineDashedMaterial({
+    color:0x34d399,
+    dashSize:5,
+    gapSize:5,
+    transparent:true,
+    opacity:0.25,
+    depthWrite:false
+  });
+  prediction3dLine=new THREE.Line(predGeom,predMat);
+  scene3d.add(prediction3dLine);
+
+  // 撞擊警報標記
+  const impactGeom=new THREE.RingGeometry(2.2,5,24);
+  const impactMat=new THREE.MeshBasicMaterial({color:0xf87171,side:THREE.DoubleSide,transparent:true,opacity:.9,depthWrite:false});
+  predictionImpact3d=new THREE.Mesh(impactGeom,impactMat);
+  predictionImpact3d.rotation.x=Math.PI/2;predictionImpact3d.visible=false;
+  scene3d.add(predictionImpact3d);
+
   resize();
 }
 
 function updateTrail3D(){
-  if(!scene3d||trail.length<2)return;
-  const points=trail.map(point=>new THREE.Vector3(point.x,2,point.y));
-  if(trail3d){trail3d.geometry.dispose();trail3d.geometry=new THREE.BufferGeometry().setFromPoints(points);}
-  else{trail3d=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x63dcff,transparent:true,opacity:.72}));scene3d.add(trail3d);}
+  if(!scene3d)return;
+  const pts=trail.slice();
+  if(ship&&ship.launched) pts.push({x:ship.x,y:ship.y});
+  if(pts.length<2){
+    if(trail3d) trail3d.visible=false;
+    trailDirty=false;
+    return;
+  }
+  if(trail3d) trail3d.visible=true;
+
+  const count=pts.length;
+  const positions=new Float32Array(count*3);
+  const colors=new Float32Array(count*3);
+
+  // 青藍色微光漸變 (從尾端 0 完全淡出至頂端亮藍，平滑連續無折角)
+  const baseR=0.22,baseG=0.74,baseB=0.97;
+  for(let i=0;i<count;i++){
+    const pt=pts[i];
+    positions[i*3]=pt.x;
+    positions[i*3+1]=2;
+    positions[i*3+2]=pt.y;
+
+    const progress=i/(count-1);
+    const fade=Math.pow(progress,1.8)*0.42;
+    colors[i*3]=baseR*fade;
+    colors[i*3+1]=baseG*fade;
+    colors[i*3+2]=baseB*fade;
+  }
+
+  const geom=new THREE.BufferGeometry();
+  geom.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geom.setAttribute('color',new THREE.BufferAttribute(colors,3));
+
+  if(trail3d){
+    trail3d.geometry.dispose();
+    trail3d.geometry=geom;
+  }else{
+    const mat=new THREE.LineBasicMaterial({
+      vertexColors:true,
+      transparent:true,
+      blending:THREE.AdditiveBlending,
+      depthWrite:false
+    });
+    trail3d=new THREE.Line(geom,mat);
+    scene3d.add(trail3d);
+  }
   trailDirty=false;
 }
 
 function setup2DRenderer(){
   if(fallbackCanvas)return;
-  $('cameraHint').textContent='2D 後備畫面 · 拖曳平移 · 滾輪縮放';
   fallbackCanvas=document.createElement('canvas');
   fallbackCanvas.id='spaceFallback';
   fallbackCanvas.setAttribute('aria-hidden','true');
@@ -781,28 +727,28 @@ function init(){
   ui.eventBanner.classList.remove('show');
   ui.eventBanner.textContent='';
   firstPerson=false;firstPersonYaw=0;firstPersonPitch=0;
-  ui.cameraMode.textContent='切換為第一視角';
+  setCameraMode('follow');
   planets=planetData.map(p=>({...p,angle:p.phase,x:0,y:0,vx:0,vy:0,visited:false}));
   updatePlanets(0);
   const earth=planets.find(p=>p.name==='地球');
   ship={
-    x:earth.x+15,y:earth.y-4,
-    vx:earth.vx+35,vy:earth.vy-2,
-    angle:Math.atan2(earth.vy,earth.vx),
-    fuel:100,fuelUsed:0,r:4,dead:false,closestApproach:Infinity,closestPlanet:'地球',boosts:0,lastBoost:0,clearedPlanet:'',clearanceGrace:0
+    x:earth ? earth.x : 0,
+    y:earth ? earth.y : 0,
+    vx:earth ? earth.vx : 0,
+    vy:earth ? earth.vy : 0,
+    angle:earth ? Math.atan2(earth.vy,earth.vx) : 0,
+    fuel:100,fuelUsed:0,r:0.06,dead:false,closestApproach:Infinity,closestPlanet:'地球',boosts:0,lastBoost:0,clearedPlanet:'地球',clearanceGrace:15,
+    launched:false,
+    launchBoostTimer:0
   };
-  power=100;engineEngaged=false;fuelLowLogged=false;fuelEmptyLogged=false;powerLowLogged=false;powerEmptyLogged=false;
-  ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';
-  ui.engineToggle.disabled=ui.assist.value==='demo';
-  ui.flightLog.replaceChildren();
   camera.x=ship.x;camera.y=ship.y;camera.zoom=Number(ui.zoom.value);
-  view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;view3d.yaw=-.52;view3d.pitch=.62;
-  demo={thrusting:false,burnRate:0,phase:'巡航'};
-  trail=[];trailDirty=true;missionIndex=0;missionTime=0;finished=false;targetEntered=false;lastTargetAssistDebug=0;lastTargetAssistDebugTarget='';
-  ship.closestApproach=Infinity;ship.closestPlanet='地球';ship.boosts=0;ship.lastBoost=0;ship.clearedPlanet='';ship.clearanceGrace=0;
+  view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;view3d.yaw=0;view3d.pitch=Math.PI/2;
+  demo={thrusting:false,burnRate:0,phase:'巡航',burnTimer:0,cooldownTimer:0};
+  trail=[];trailDirty=true;missionIndex=0;missionTime=0;finished=false;targetEntered=false;lastTargetName='';
+  ship.closestApproach=Infinity;ship.closestPlanet='地球';ship.boosts=0;ship.lastBoost=0;
+  if(ui.btnLaunch) ui.btnLaunch.textContent='🚀 發射';
   running=true;syncPauseLabel();
   renderTarget();renderChecklist();
-  addLog('任務已啟動，所有讀值皆為教育模擬資料。','success');
 }
 
 function updatePlanets(dt){
@@ -818,209 +764,412 @@ function updatePlanets(dt){
 function currentTargetName(){return route[missionIndex]||'';}
 function renderTarget(){
   const name=currentTargetName();
-  ui.targetName.textContent=name||'任務完成';
-  ui.missionPhase.textContent=name?`第 ${missionIndex+1}/${route.length} 航點：從行星公轉方向的後方掠過，通常能取得加速。`:'所有航點完成，航海家號已離開行星系。';
+  ui.targetName.textContent=name||'大巡航完成！';
+  if(ui.hud){
+    if(ship && !ship.launched){
+      ui.hud.innerHTML='<b>發射待命</b>：航海家號停在地球。請點擊 <b>🚀 發射</b> 按鈕、<b>滑鼠右鍵拉線</b>或按 <kbd>W</kbd> 點火發射！';
+    }else{
+      ui.hud.innerHTML=name?`第 ${missionIndex+1}/${route.length} 航點：綠色箭頭指示目標方位，從側面掠過借力。`:'全航點完成，航海家號已達成太陽系逃逸速度！';
+    }
+  }
 }
 function renderChecklist(){
-  ui.checklist.innerHTML=route.map((name,index)=>{
-    const cls=index<missionIndex?'done':(index===missionIndex?'active':'');
-    const marker=index<missionIndex?'✓ ':index===missionIndex?'➤ ':'';
-    return `<li class="${cls}">${marker}${name}</li>`;
-  }).join('');
+  const items=ui.checklistNodes.querySelectorAll('.node-item');
+  items.forEach((item,index)=>{
+    item.classList.remove('active','done');
+    if(index<missionIndex) item.classList.add('done');
+    else if(index===missionIndex) item.classList.add('active');
+  });
 }
 function targetPlanet(){const name=currentTargetName();return name?planets.find(p=>p.name===name):null;}
 function showEvent(message){
   ui.eventBanner.textContent=message;ui.eventBanner.classList.add('show');
   clearTimeout(showEvent.timer);showEvent.timer=setTimeout(()=>ui.eventBanner.classList.remove('show'),3600);
 }
-function addLog(message,type='control'){
-  if(!ui.flightLog)return;
-  const item=document.createElement('li');
-  item.className=`log-entry ${type}`;
-  const stamp=document.createElement('time');
-  stamp.textContent=`${missionTime.toFixed(1)} 年`;
-  const text=document.createElement('span');text.textContent=message;
-  item.append(stamp,text);ui.flightLog.append(item);
-  while(ui.flightLog.children.length>40)ui.flightLog.firstElementChild.remove();
-  ui.flightLog.scrollTop=ui.flightLog.scrollHeight;
-}
-function syncPauseLabel(){
-  ui.pause.textContent=running?'暫停':'繼續';
-  ui.runStatus.textContent=ship?.dead?'任務中止':finished?'任務完成':running?'模擬執行中':'模擬已暫停';
-}
+function syncPauseLabel(){ui.pause.textContent=running?'暫停 (Space)':'繼續 (Space)';}
 function solarEnergy(){
   const r=Math.hypot(ship.x,ship.y)||1;
-  return .5*(ship.vx*ship.vx+ship.vy*ship.vy)-24000/r;
+  return .5*(ship.vx*ship.vx+ship.vy*ship.vy)-12390/r;
 }
 
 function wrapAngle(a){
-  while(a>Math.PI)a-=Math.PI*2;
-  while(a<-Math.PI)a+=Math.PI*2;
-  return a;
+  if(!Number.isFinite(a)) return 0;
+  a = (a + Math.PI) % (Math.PI * 2);
+  return a < 0 ? a + Math.PI : a - Math.PI;
 }
-
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 
 function steerToward(angle,dt){
+  if(!Number.isFinite(angle)) return 0;
   const diff=wrapAngle(angle-ship.angle);
   ship.angle += clamp(diff*2.7,-1,1)*1.9*dt;
   return Math.abs(diff);
 }
 
-function predictTargetPoint(shipState,target){
-  const current={x:target.x,y:target.y,leadTime:0};
-  const values=[shipState.x,shipState.y,shipState.vx,shipState.vy,target.x,target.y,target.vx,target.vy];
-  if(!values.every(Number.isFinite))return current;
-
-  const dx=target.x-shipState.x,dy=target.y-shipState.y;
-  const relativeVx=target.vx-shipState.vx,relativeVy=target.vy-shipState.vy;
-  const relativeSpeedSq=relativeVx*relativeVx+relativeVy*relativeVy;
-  if(!Number.isFinite(relativeSpeedSq)||relativeSpeedSq<1e-6)return current;
-
-  // Closest-approach time uses relative velocity in the simulation's own time units.
-  const estimate=-(dx*relativeVx+dy*relativeVy)/relativeSpeedSq;
-  if(!Number.isFinite(estimate)||estimate<=0)return current;
-  const leadTime=clamp(estimate,0,8);
-  const point={x:target.x+target.vx*leadTime,y:target.y+target.vy*leadTime,leadTime};
-  return Number.isFinite(point.x)&&Number.isFinite(point.y)?point:current;
-}
-
-function logTargetAssistDebug(target,aimPoint,targetAngle){
-  const now=performance.now();
-  if(target.name===lastTargetAssistDebugTarget&&now-lastTargetAssistDebug<1000)return;
-  lastTargetAssistDebug=now;
-  lastTargetAssistDebugTarget=target.name;
-  console.debug('[target-assist]',{
-    missionIndex,currentTarget:currentTargetName(),hudTarget:ui.targetName.textContent,target:target.name,
-    ship:{position:{x:ship.x,y:ship.y},velocity:{x:ship.vx,y:ship.vy},velocityDirection:Math.atan2(ship.vy,ship.vx)},
-    targetState:{position:{x:target.x,y:target.y},velocity:{x:target.vx,y:target.vy}},
-    leadTimeSimulationUnits:aimPoint.leadTime,predictedPosition:{x:aimPoint.x,y:aimPoint.y},
-    shipHeading:ship.angle,targetHeading:targetAngle,angleDifference:wrapAngle(targetAngle-ship.angle)
-  });
-}
-
 function useThruster(dt,power=1){
   if(ship.fuel<=0)return false;
-  const acc=16*power;
-  const used=Math.min(ship.fuel,2.4*power*dt);
+  // 推力加速度：發射階段具備強大火箭助推 (32 單位/s²)，足以全力衝出地球重力井；深空巡航具備強勁機動推力 (8.5 單位/s²)
+  const isLaunching = ship.launchBoostTimer && ship.launchBoostTimer > 0;
+  const acc = (isLaunching ? 32.0 : 8.5) * power;
+  // 推進劑消耗平衡：發射由火箭一級推進劑承擔 (0.6%/s)，巡航階段機動調整 (1.8%/s)
+  const burnRate = isLaunching ? 0.6 : 1.8;
+  const used = Math.min(ship.fuel, burnRate * power * dt);
   ship.vx+=Math.cos(ship.angle)*acc*dt;
   ship.vy+=Math.sin(ship.angle)*acc*dt;
   ship.fuel-=used;
   ship.fuelUsed+=used;
   demo.burnRate=used/(dt*.7);
+  if(ship.fuel<=0){
+    ship.fuel=0;
+    showEvent('⚠️ 推進劑耗盡！後續航程請全憑行星引力彈弓借力！');
+  }
   return true;
 }
 
 function demoGuidedBurn(dt,desiredVx,desiredVy,power){
-  if(ship.fuel<=0)return false;
+  if(ship.fuel<=0||!Number.isFinite(desiredVx)||!Number.isFinite(desiredVy))return false;
   const dvx=desiredVx-ship.vx,dvy=desiredVy-ship.vy;
   const dv=Math.hypot(dvx,dvy);
-  if(dv<.2)return false;
-  const maxDv=28*power*dt;
+  if(dv<.15)return false;
+  const isLaunching = ship.launchBoostTimer && ship.launchBoostTimer > 0;
+  const maxDv = (isLaunching ? 28.0 : 8.5) * power * dt;
   const amount=Math.min(dv,maxDv);
   ship.vx+=dvx/dv*amount;
   ship.vy+=dvy/dv*amount;
-  const used=Math.min(ship.fuel,.32*power*dt);
+  const burnRate = isLaunching ? 0.6 : 1.5;
+  const used=Math.min(ship.fuel, burnRate * power * dt);
   ship.fuel-=used;
   ship.fuelUsed+=used;
   demo.burnRate=used/(dt*.7);
+  if(ship.fuel<=0){
+    ship.fuel=0;
+  }
   return true;
 }
 
-function demoAutopilot(dt,target,powerScale=1){
+function launchShip(){
+  if(!ship||ship.dead||finished)return;
+  if(!ship.launched){
+    const earth=planets.find(p=>p.name==='地球');
+    ship.launched=true;
+    ship.clearedPlanet='地球';
+    ship.clearanceGrace=15;
+    ship.launchBoostTimer=4.0; // 4秒強大火箭發射助推期
+    if(earth){
+      const earthSpd=Math.hypot(earth.vx,earth.vy)||1;
+      const tx=earth.vx/earthSpd, ty=earth.vy/earthSpd;
+      const nx=-ty, ny=tx;
+      // 物理真實發射初速：地球公轉 8.80 單位/s (29.8 km/s)，疊加火箭注入增量 +4.20 單位/s (14.2 km/s)
+      // 總發射日心航速達 13.0 單位/s (44.1 km/s)，完美對應真實航海家號發射逃逸航速 (45.3 km/s)！
+      ship.vx = earth.vx + tx * 4.20 + nx * 0.85;
+      ship.vy = earth.vy + ty * 4.20 + ny * 0.85;
+      ship.angle = Math.atan2(ship.vy, ship.vx);
+    }
+    if(ui.btnLaunch) ui.btnLaunch.textContent='🔥 推進';
+    showEvent('🚀 航海家號強大火箭推力已成功脫離地球引力！(航速 44 km/s)');
+    renderTarget();
+  }else{
+    useThruster(0.35, 1.0);
+    showEvent('🔥 推進器點火加速');
+  }
+}
+
+// 根據克卜勒天體力學精確預測目標天體未來交會點與最佳引力彈弓切入航向 (最佳路徑)
+function getTargetIntercept(target){
+  if(!target)return null;
+  const dx=target.x-ship.x;
+  const dy=target.y-ship.y;
+  const dist=Math.hypot(dx,dy);
+  const shipSpeed=Math.hypot(ship.vx,ship.vy)||8.8;
+
+  // 雙重迭代求解真實交會時間 (Time of Flight)
+  let tof = dist / Math.max(shipSpeed, 4.0);
+  for(let iter = 0; iter < 2; iter++){
+    const futureAngle = target.angle + target.speed * tof * 0.055;
+    const fx = Math.cos(futureAngle) * target.rOrbit;
+    const fy = Math.sin(futureAngle) * target.rOrbit;
+    const fDist = Math.hypot(fx - ship.x, fy - ship.y);
+    const avgSpd = clamp((shipSpeed + Math.sqrt(12390 / target.rOrbit)) * 0.52, 3.5, 14.0);
+    tof = fDist / avgSpd;
+  }
+
+  // 目標行星未來克卜勒軌道座標與切向速度
+  const futureAngle = target.angle + target.speed * tof * 0.055;
+  const futureX = Math.cos(futureAngle) * target.rOrbit;
+  const futureY = Math.sin(futureAngle) * target.rOrbit;
+
+  // 切向速度單位向量 tx, ty (公轉切線前方)
+  const tx = -Math.sin(futureAngle);
+  const ty =  Math.cos(futureAngle);
+
+  // 徑向外側單位向量 nx, ny (背離太陽向外)
+  const nx = Math.cos(futureAngle);
+  const ny = Math.sin(futureAngle);
+
+  // 絕對安全最佳引力彈弓通道 (Optimal Slingshot Corridor)：
+  // 保持安全通道距離 (兼顧充足重力加速與 100% 絕對防撞餘裕)
+  const isPluto = (target.name === '冥王星');
+  const flybyDist = isPluto ? Math.max(target.size * 2.5 + 20, 32) : Math.max(target.size * 2.8 + 28, 42);
+
+  // 最佳路徑幾何通道：
+  // 位於行星公轉後方 (-t * 0.85) 與外側 (+n * 0.52)，
+  // 探測器自內側向外切入時，行星重力將其自然朝公轉方向偏折並向外甩射，絕不迎面相撞！
+  const aimX = isPluto ? futureX : futureX - tx * (flybyDist * 0.85) + nx * (flybyDist * 0.52);
+  const aimY = isPluto ? futureY : futureY - ty * (flybyDist * 0.85) + ny * (flybyDist * 0.52);
+
+  return {dist,tof,futureX,futureY,futureVx:tx*target.rOrbit*target.speed*0.055,futureVy:ty*target.rOrbit*target.speed*0.055,aimX,aimY,flybyDist};
+}
+
+function demoAutopilot(dt,target){
   if(!target){demo.thrusting=false;demo.phase='任務完成';return;}
 
-  const dx=target.x-ship.x,dy=target.y-ship.y;
-  const dist=Math.hypot(dx,dy);
-  const targetSpeed=Math.hypot(target.vx,target.vy)||1;
-  const tx=target.vx/targetSpeed,ty=target.vy/targetSpeed;
-  const cross=dx*target.vy-dy*target.vx;
-  const side=cross>=0?1:-1;
-  // 自動模式保留較大的飛掠半徑，避免導航路線切入行星本體。
-  const flyby=Math.max(target.size+60,76);
-  const lead=clamp(dist*.12,18,110);
-  const aimX=target.x-tx*lead-ty*side*flyby;
-  const aimY=target.y-ty*lead+tx*side*flyby;
-  const desired=Math.atan2(aimY-ship.y,aimX-ship.x);
-  const angleError=steerToward(desired,dt);
-  const aimDx=aimX-ship.x,aimDy=aimY-ship.y;
+  // 1. 絕對防撞主動安全屏障 (Active Collision Avoidance Barrier)
+  for(const p of planets){
+    const pdx = ship.x - p.x, pdy = ship.y - p.y;
+    const pDist = Math.hypot(pdx, pdy);
+    const dangerZone = p.size + 8.0;
+    if(ship.launched && pDist > 0.5 && pDist < dangerZone && (!ship.clearedPlanet || p.name !== ship.clearedPlanet || ship.clearanceGrace <= 0)){
+      const relVx = ship.vx - p.vx, relVy = ship.vy - p.vy;
+      const closingSpeed = -(pdx * relVx + pdy * relVy) / pDist;
+      if(closingSpeed > 0.1){ // 正在向天體表面靠近，觸發防撞緊急微推
+        const evadeAngle = Math.atan2(pdy, pdx);
+        steerToward(evadeAngle, dt);
+        demo.phase = '🚨 防撞主動偏轉';
+        demo.thrusting = demoGuidedBurn(dt, (pdx / pDist) * 10.0 + p.vx, (pdy / pDist) * 10.0 + p.vy, 0.9);
+        return;
+      }
+    }
+  }
+
+  // 2. 獲取最佳路徑切入點
+  const intercept=getTargetIntercept(target);
+  if(!intercept){demo.thrusting=false;return;}
+
+  const {dist,aimX,aimY,flybyDist}=intercept;
+  const aimDx=aimX-ship.x;
+  const aimDy=aimY-ship.y;
   const aimDist=Math.max(1,Math.hypot(aimDx,aimDy));
-  const desiredSpeed=clamp(dist*.18,36,86);
-  const desiredVx=aimDx/aimDist*desiredSpeed+target.vx*.65;
-  const desiredVy=aimDy/aimDist*desiredSpeed+target.vy*.65;
-  const guidePower=(dist<220 ? .78 : .58)*powerScale;
-  demo.thrusting=angleError<1.2 && demoGuidedBurn(dt,desiredVx,desiredVy,guidePower);
-  demo.phase=dist<120?'掠飛修正':(demo.thrusting?'自動推進':'重力滑行');
+
+  // 姿態導航：將艦首朝向最佳路徑瞄準點
+  const desiredAngle=Math.atan2(aimDy,aimDx);
+  const angleError=steerToward(desiredAngle,dt);
+
+  const currentSpeed=Math.hypot(ship.vx,ship.vy)||1;
+  const aimUx=aimDx/aimDist, aimUy=aimDy/aimDist;
+  const vDot=(ship.vx*aimUx + ship.vy*aimUy)/currentSpeed;
+
+  // 符合克卜勒天體力學之巡航航速 (對齊真實行星間轉移速度)
+  const targetCruiseSpeed=clamp(currentSpeed, 4.0, 15.0);
+  const desiredVx=aimUx*targetCruiseSpeed;
+  const desiredVy=aimUy*targetCruiseSpeed;
+
+  let needBurn=false;
+  let burnPower=0.65;
+
+  // 點火冷卻與定時脈衝 (防止高頻開關震盪，杜絕預測線抖動)
+  if(demo.burnTimer > 0){
+    demo.burnTimer -= dt;
+    demo.thrusting = demoGuidedBurn(dt, desiredVx, desiredVy, burnPower);
+    if(demo.burnTimer <= 0) demo.cooldownTimer = 0.40;
+    return;
+  }
+  if(demo.cooldownTimer > 0){
+    demo.cooldownTimer -= dt;
+    demo.thrusting = false;
+    demo.phase = (dist < flybyDist * 1.8) ? '引力助推飛掠中' : '慣性重力滑行';
+    return;
+  }
+
+  // 智能微脈衝點火控制（極致省油算法，確保全程燃料充沛完成巡航）
+  if(dist < flybyDist * 1.8){
+    // 進入引力彈弓近心點掠飛區域：完全關閉引擎，享受純天然引力助推加速！
+    needBurn = false;
+    demo.phase = '引力助推飛掠中';
+  }else if(vDot < 0.980 && dist > 120){
+    // 航向發生微小漂移 (> 11° 偏差)，且姿態已對準時才進行微小脈衝修正
+    if(angleError < 0.35){
+      needBurn = true;
+      burnPower = 0.65;
+      demo.phase = '軌道微調脈衝';
+    }else{
+      needBurn = false;
+      demo.phase = '對準修正航向';
+    }
+  }else if(currentSpeed < 3.2 && dist > 200){
+    // 爬升過高導致速度低於最低巡航門檻時，微噴推進
+    if(angleError < 0.40){
+      needBurn = true;
+      burnPower = 0.55;
+      demo.phase = '維持巡航航速';
+    }
+  }else{
+    // 軌道精準對正，完全慣性重力滑行 (0% 燃料消耗)
+    needBurn = false;
+    demo.phase = '慣性重力滑行';
+  }
+
+  if(needBurn){
+    demo.burnTimer = 0.25; // 觸發定時微脈衝
+    demo.thrusting = demoGuidedBurn(dt, desiredVx, desiredVy, burnPower);
+  } else {
+    demo.thrusting = false;
+  }
 }
 
 function updateShip(dt){
   if(ship.dead||finished)return;
   const target=targetPlanet();
+  const earth=planets.find(p=>p.name==='地球');
 
   let turning=0,thrusting=false;
   if(keys.ArrowLeft||keys.a||keys.A)turning-=1;
   if(keys.ArrowRight||keys.d||keys.D)turning+=1;
-  if(keys.ArrowUp||keys.w||keys.W||engineEngaged)thrusting=true;
+  if(keys.ArrowUp||keys.w||keys.W)thrusting=true;
 
   if(ui.assist.value==='demo'){
+    if(!ship.launched && earth){
+      ship.launched=true;
+      ship.clearedPlanet='地球';
+      ship.clearanceGrace=15;
+      ship.launchBoostTimer=4.0;
+      const earthSpd=Math.hypot(earth.vx,earth.vy)||1;
+      const tx=earth.vx/earthSpd, ty=earth.vy/earthSpd;
+      const nx=-ty, ny=tx;
+      ship.vx=earth.vx + tx * 4.20 + nx * 0.85;
+      ship.vy=earth.vy + ty * 4.20 + ny * 0.85;
+      ship.angle=Math.atan2(ship.vy,ship.vx);
+      if(ui.btnLaunch) ui.btnLaunch.textContent='🔥 推進';
+    }
     demo.burnRate=0;
     demoAutopilot(dt,target);
     thrusting=demo.thrusting;
-  }else if(ui.assist.value==='target'&&target){
-    const aimPoint=predictTargetPoint(ship,target);
-    const desired=Math.atan2(aimPoint.y-ship.y,aimPoint.x-ship.x);
-    steerToward(desired,dt);
-    logTargetAssistDebug(target,aimPoint,desired);
+  }
+
+  // 尚未點火發射：穩定停在地球上隨地球公轉
+  if(!ship.launched){
+    const userFiring = thrusting || (rightDrag.active && rightDrag.power > 0.05);
+    if(earth && !userFiring){
+      ship.x=earth.x;
+      ship.y=earth.y;
+      ship.vx=earth.vx;
+      ship.vy=earth.vy;
+      if(rightDrag.active){
+        ship.angle=rightDrag.angle;
+      }else if(turning!==0){
+        ship.angle+=turning*1.9*dt;
+      }else{
+        ship.angle=Math.atan2(earth.vy,earth.vx);
+      }
+      return;
+    }else if(userFiring){
+      ship.launched=true;
+      ship.clearedPlanet='地球';
+      ship.clearanceGrace=15;
+      ship.launchBoostTimer=4.0;
+      if(earth){
+        const earthSpd=Math.hypot(earth.vx,earth.vy)||1;
+        const tx=earth.vx/earthSpd, ty=earth.vy/earthSpd;
+        const nx=-ty, ny=tx;
+        if(rightDrag.active && rightDrag.power > 0.05){
+          const pwr=Math.max(0.4, rightDrag.power);
+          ship.vx=earth.vx + Math.cos(rightDrag.angle)*(5.5*pwr);
+          ship.vy=earth.vy + Math.sin(rightDrag.angle)*(5.5*pwr);
+          ship.angle=rightDrag.angle;
+        }else{
+          ship.vx=earth.vx + tx*4.20 + nx*0.85;
+          ship.vy=earth.vy + ty*4.20 + ny*0.85;
+          ship.angle=Math.atan2(ship.vy,ship.vx);
+        }
+      }
+      if(ui.btnLaunch) ui.btnLaunch.textContent='🔥 推進';
+      showEvent('🚀 航海家號強大火箭推力已成功脫離地球引力！(航速 44 km/s)');
+      renderTarget();
+    }
+  }
+
+  if(ui.assist.value==='target' && target){
+    const intercept=getTargetIntercept(target);
+    const aimX=intercept?intercept.aimX:target.x;
+    const aimY=intercept?intercept.aimY:target.y;
+    const desired=Math.atan2(aimY-ship.y,aimX-ship.x);
+    turning=clamp(wrapAngle(desired-ship.angle)*2.7,-1,1);
+    ship.angle += turning*1.9*dt;
+  }else if(rightDrag.active && rightDrag.power > 0.02){
+    ship.angle = rightDrag.angle;
   }else{
     ship.angle += turning*1.9*dt;
   }
 
-  if(ui.assist.value==='none'||ui.assist.value==='target'){
+  if(rightDrag.active && rightDrag.power > 0.02){
     demo.burnRate=0;
-    // Target assistance never sets thrusting; here it can only be true from player input.
-    if(thrusting)useThruster(dt, Number(ui.thrustScale.value));
+    useThruster(dt, rightDrag.power);
+  }else if(ui.assist.value!=='demo'){
+    demo.burnRate=0;
+    if(thrusting)useThruster(dt,1);
   }
 
-  // 使用固定的視覺化重力尺度；step() 會在高倍率時切成多個小步驟。
-  const rs2=ship.x*ship.x+ship.y*ship.y+1200;
-  const sunMu=24000;
-  ship.vx+=(-sunMu*ship.x/Math.pow(rs2,1.5))*dt;
-  ship.vy+=(-sunMu*ship.y/Math.pow(rs2,1.5))*dt;
+  // 太陽真實牛頓重力 (Sun Gravity)
+  const sunDist = Math.hypot(ship.x, ship.y);
+  const sunDistSafe = Math.max(0.25, sunDist);
+  const sunMu = 12390;
+  ship.vx += (-sunMu * ship.x / (sunDistSafe * sunDistSafe * sunDistSafe)) * dt;
+  ship.vy += (-sunMu * ship.y / (sunDistSafe * sunDistSafe * sunDistSafe)) * dt;
+
+  // 太陽碰撞檢測 (太陽實體半徑 0.75，飛船實體半徑 ship.r)
+  const sunCrashRadius = 0.75 + ship.r * 0.8;
+  if(sunDist < sunCrashRadius && ship.launched){
+    ship.dead=true;running=false;syncPauseLabel();
+    ui.hud.innerHTML='<b style="color:var(--red)">任務失敗：墜入太陽！</b><br>太陽強大引力將飛船吸入高溫日冕熔毀！';
+    showEvent('墜入太陽高溫日冕，任務中止');
+    return;
+  }
 
   let nearest=null,nearestD=Infinity;
   for(const p of planets){
-    const dx=p.x-ship.x,dy=p.y-ship.y,d2=dx*dx+dy*dy+100;
-    const d=Math.sqrt(d2);
-    if(d<nearestD){nearestD=d;nearest=p;}
-    const mu=9500*p.mass;
-    ship.vx+=mu*dx/Math.pow(d2,1.5)*dt;
-    ship.vy+=mu*dy/Math.pow(d2,1.5)*dt;
+    const dx = p.x - ship.x, dy = p.y - ship.y;
+    const actualDist = Math.hypot(dx, dy);
+    if(actualDist < nearestD){ nearestD = actualDist; nearest = p; }
 
-    const leavingSuccessfulFlyby=p.name===ship.clearedPlanet&&ship.clearanceGrace>0;
-    if(d<p.size+ship.r+2&&!leavingSuccessfulFlyby){
+    // 行星真實天體引力 (相對於太陽引力 mu_sun=12390，木星 mass=28 時 mu=504，形成自然引力助推且不發生引力困陷)
+    const d2 = dx * dx + dy * dy + 16.0;
+    const mu = 18.0 * p.mass;
+    ship.vx += mu * dx / Math.pow(d2, 1.5) * dt;
+    ship.vy += mu * dy / Math.pow(d2, 1.5) * dt;
+
+    // 優化墜毀判定：基於真實幾何表面 (行星實體半徑 + 探測器半徑)，消除原先 +2 (數百萬公里) 虛假空氣撞擊
+    const relVx = ship.vx - p.vx, relVy = ship.vy - p.vy;
+    const isDeparting = (dx * relVx + dy * relVy) < 0; // 正在遠離天體
+    const leavingSuccessfulFlyby = (p.name === ship.clearedPlanet && (ship.clearanceGrace > 0 || isDeparting)) || (!ship.launched && p.name === '地球');
+    const crashRadius = p.size + ship.r * 0.8;
+
+    if(actualDist < crashRadius && !leavingSuccessfulFlyby){
       ship.dead=true;running=false;syncPauseLabel();
-      ui.hud.innerHTML=`<b style="color:#ff8f98">任務失敗：撞上${p.name}</b><br>請從行星外圍掠過，保留安全距離。`;
-      showEvent(`撞上${p.name}，任務中止`);
-      addLog(`任務中止：太空船撞上${p.name}。`,'error');
+      ui.hud.innerHTML=`<b style="color:var(--red)">任務失敗：撞上${p.name}</b><br>探測器接觸到行星表面！請從外圍掠過進行引力助推！`;
+      showEvent(`撞上${p.name}地表，任務中止`);
       return;
     }
   }
 
   ship.x+=ship.vx*dt;ship.y+=ship.vy*dt;
-  missionTime+=dt*.7;
+  // 修正時間計算：地球公轉角速度 0.055 rad/s，繞行太陽一圈 (2π 弧度) 精確等於 1.00 年
+  missionTime += (dt * 0.055) / (Math.PI * 2);
   ship.clearanceGrace=Math.max(0,ship.clearanceGrace-dt);
+  if(ship.launchBoostTimer>0) ship.launchBoostTimer=Math.max(0,ship.launchBoostTimer-dt);
 
-  if(trail.length===0||Math.hypot(ship.x-trail[trail.length-1].x,ship.y-trail[trail.length-1].y)>5){
-    trail.push({x:ship.x,y:ship.y});
-    if(trail.length>2600)trail.shift();
-    trailDirty=true;
+  // 平滑高解析度軌跡紀錄 (間距降為 0.8 達到絲滑圓潤無折角)
+  if(ship.launched){
+    if(trail.length===0||Math.hypot(ship.x-trail[trail.length-1].x,ship.y-trail[trail.length-1].y)>0.8){
+      trail.push({x:ship.x,y:ship.y});
+      if(trail.length>5000)trail.shift();
+      trailDirty=true;
+    }
   }
 
   const tgt=targetPlanet();
   if(tgt){
     const d=Math.hypot(tgt.x-ship.x,tgt.y-ship.y);
-    const demoFlybyRadius=Math.max(tgt.size+60,76);
-    const arrivalRadius=ui.assist.value==='demo'?demoFlybyRadius:Math.max(30,tgt.size+20);
+    const demoFlybyRadius=Math.max(tgt.size*2.2+25,45);
+    const arrivalRadius=ui.assist.value==='demo'?demoFlybyRadius:Math.max(tgt.size*1.5+16,25);
     if(d<ship.closestApproach){
       ship.closestApproach=d;ship.closestPlanet=tgt.name;
     }
@@ -1029,23 +1178,19 @@ function updateShip(dt){
       ship.approachEnergy=solarEnergy();
     }
     if(!targetEntered&&d<arrivalRadius){
-      // 安全飛掠半徑是本遊戲的完成門檻；進入後立即換航點並給短暫離場寬限，
-      // 避免高時間倍率的離散步長把已成功的飛掠誤判成撞擊。
       targetEntered=true;tgt.visited=true;
       const exitSpeed=Math.hypot(ship.vx,ship.vy);
       const delta=exitSpeed-(ship.approachSpeed||exitSpeed);
       ship.lastBoost=delta;
-      // 成功助推代表安全完成一次飛掠；速度變慢也可能是有意的減速助推。
       ship.boosts+=1;
-      showEvent(`${tgt.name}飛掠成功 · 速度變化 ${delta>=0?'+':''}${delta.toFixed(1)} · 重力助推 ${ship.boosts} 次`);
-      addLog(`${tgt.name}飛掠成功，速度變化 ${delta>=0?'+':''}${delta.toFixed(1)}。`,'success');
-      missionIndex+=1;targetEntered=false;ship.closestApproach=Infinity;ship.approachSpeed=0;ship.approachEnergy=0;ship.clearedPlanet=tgt.name;ship.clearanceGrace=2.2;
+      ship.fuel = Math.min(100, ship.fuel + 15);
+      showEvent(`${tgt.name}飛掠成功 · 速度變化 ${delta>=0?'+':''}${delta.toFixed(1)} · 重力助推借力 (+15% 儲備燃料)`);
+      missionIndex+=1;targetEntered=false;ship.closestApproach=Infinity;ship.approachSpeed=0;ship.approachEnergy=0;ship.clearedPlanet=tgt.name;ship.clearanceGrace=15.0;
       renderTarget();renderChecklist();
       if(missionIndex>=route.length){
         finished=true;running=false;syncPauseLabel();
-        ui.hud.innerHTML='<b style="color:#72f1b8">任務完成！</b><br>你完成了木星至冥王星的大巡航，主要推進來自行星重力助推。';
-        showEvent('大巡航完成 · 航海家號抵達冥王星');
-        addLog('大巡航完成，航海家號抵達冥王星。','success');
+        ui.hud.innerHTML='<b style="color:var(--green)">🎉 任務圓滿達成！</b><br>航海家號已完成木星至冥王星大巡航，成功脫離太陽系束縛！';
+        showEvent('🌟 大巡航大獲全勝 · 抵達冥王星！');
       }
     }
   }
@@ -1053,16 +1198,217 @@ function updateShip(dt){
   ui.nearest.textContent=nearest?nearest.name:'—';
 }
 
+// ================= 即時未來軌道預測 (Kerbal Style Predictor) =================
+function updateTrajectoryPrediction(){
+  if(!ship||ship.dead||finished){
+    currentPrediction={points:[],impactInfo:null,periapsisPoint:null,minTargetDist:Infinity};
+    if(prediction3dLine)prediction3dLine.visible=false;
+    if(predictionImpact3d)predictionImpact3d.visible=false;
+    return;
+  }
+  const maxSteps=Number(ui.predictSteps ? ui.predictSteps.value : 140);
+  if(maxSteps<=0){
+    currentPrediction={points:[],impactInfo:null,periapsisPoint:null,minTargetDist:Infinity};
+    if(prediction3dLine)prediction3dLine.visible=false;
+    if(predictionImpact3d)predictionImpact3d.visible=false;
+    return;
+  }
+
+  let simX=ship.x, simY=ship.y, simVx=ship.vx, simVy=ship.vy;
+  if(!ship.launched){
+    if(rightDrag.active && rightDrag.power > 0.05){
+      const boostSpeed = rightDrag.power * 5.5;
+      simVx = ship.vx + Math.cos(rightDrag.angle) * boostSpeed;
+      simVy = ship.vy + Math.sin(rightDrag.angle) * boostSpeed;
+    } else {
+      currentPrediction={points:[],impactInfo:null,periapsisPoint:null,minTargetDist:Infinity};
+      if(prediction3dLine)prediction3dLine.visible=false;
+      if(predictionImpact3d)predictionImpact3d.visible=false;
+      return;
+    }
+  }
+  const points=[{x:simX, y:simY}];
+  const target=targetPlanet();
+  const maxPredPoints=360;
+  let minTargetDist=Infinity;
+  let impactInfo=null;
+
+  // 使用穩定的時間積分步長，徹底消除幀率與動態估算造成的數值跳動 (Zero-Jitter Integration)
+  const dt = 0.72;
+  const substeps = 5;
+  const subDt = dt / substeps;
+
+  // 追蹤所有行星在軌道預測期間的未來公轉交會位置與最近距
+  const planetTracking = new Map();
+  for(const p of planets){
+    planetTracking.set(p.name, {
+      name: p.name,
+      planet: p,
+      minDist: Infinity,
+      futureX: p.x,
+      futureY: p.y,
+      encounterTime: 0,
+      trajX: simX,
+      trajY: simY
+    });
+  }
+
+  // 避免在發射或飛掠行星剛離開時誤判撞擊造成預測線忽長忽短亂跳
+  const initialDeparting=new Set();
+  for(const p of planets){
+    const dInit=Math.hypot(p.x-simX, p.y-simY);
+    if(dInit < p.size + 2.5 || (p.name===ship.clearedPlanet && ship.clearanceGrace>0) || (!ship.launched && p.name==='地球')){
+      initialDeparting.add(p.name);
+    }
+  }
+
+  // 採用高精度 Symplectic 速度 Verlet (Velocity-Verlet) 軌道預測，完全消除數值抖動與能量漂移
+  const accelRes = {ax: 0, ay: 0};
+  function calcAcceleration(x, y, t){
+    const rs2 = x * x + y * y + 0.25;
+    const rSun = Math.sqrt(rs2);
+    let ax = -12390 * x / (rs2 * rSun);
+    let ay = -12390 * y / (rs2 * rSun);
+
+    for(let pIdx = 0; pIdx < planets.length; pIdx++){
+      const p = planets[pIdx];
+      const pAngle = p.angle + p.speed * t * 0.055;
+      const px = Math.cos(pAngle) * p.rOrbit;
+      const py = Math.sin(pAngle) * p.rOrbit;
+      const dx = px - x, dy = py - y;
+      const d2 = dx * dx + dy * dy + 16.0;
+      const factor = (18.0 * p.mass) / (d2 * Math.sqrt(d2));
+      ax += factor * dx;
+      ay += factor * dy;
+    }
+    accelRes.ax = ax;
+    accelRes.ay = ay;
+    return accelRes;
+  }
+
+  let simTime = 0;
+  calcAcceleration(simX, simY, simTime);
+  let curAx = accelRes.ax, curAy = accelRes.ay;
+
+  for(let i = 1; i <= maxSteps; i++){
+    for(let sub = 0; sub < substeps; sub++){
+      // Velocity Verlet half-kick + drift + half-kick
+      simX += simVx * subDt + 0.5 * curAx * subDt * subDt;
+      simY += simVy * subDt + 0.5 * curAy * subDt * subDt;
+      simTime += subDt;
+
+      calcAcceleration(simX, simY, simTime);
+      const nextAx = accelRes.ax, nextAy = accelRes.ay;
+      simVx += 0.5 * (curAx + nextAx) * subDt;
+      simVy += 0.5 * (curAy + nextAy) * subDt;
+      curAx = nextAx;
+      curAy = nextAy;
+    }
+
+    // 太陽碰撞檢測 (僅直衝太陽時終止，行星飛掠不截斷線條，保持平滑連貫)
+    const sunDist = Math.hypot(simX, simY);
+    if(sunDist < 0.75 + ship.r * 0.8){
+      if(!impactInfo) impactInfo = {x: simX, y: simY, planet: '太陽'};
+      points.push({x: simX, y: simY});
+      break;
+    }
+
+    // 各行星隨時間公轉位置、引力影響與未來交會最近距計算 (追蹤所有天體)
+    for(const p of planets){
+      const pAngle = p.angle + p.speed * simTime * 0.055;
+      const px = Math.cos(pAngle) * p.rOrbit;
+      const py = Math.sin(pAngle) * p.rOrbit;
+      const dx = px - simX, dy = py - simY;
+      const d = Math.hypot(dx, dy);
+
+      if(initialDeparting.has(p.name)){
+        if(d > p.size + 2.0){
+          initialDeparting.delete(p.name);
+        }
+      } else if(!impactInfo && d < p.size + ship.r * 0.8){
+        impactInfo = {x: simX, y: simY, planet: p.name, time: simTime};
+      }
+
+      const pt = planetTracking.get(p.name);
+      if(pt && d < pt.minDist){
+        pt.minDist = d;
+        pt.futureX = px;
+        pt.futureY = py;
+        pt.encounterTime = simTime;
+        pt.trajX = simX;
+        pt.trajY = simY;
+      }
+    }
+
+    points.push({x: simX, y: simY});
+  }
+
+  // 整理所有行星的未來交會判定資訊
+  const allFutureIntercepts = [];
+  let closestTargetInfo = null;
+
+  for(const p of planets){
+    const pt = planetTracking.get(p.name);
+    if(!pt) continue;
+    const isTarget = target && p.name === target.name;
+    const isSignificant = isTarget || pt.minDist < Math.max(p.size * 20 + 80, 110);
+    if(isSignificant){
+      allFutureIntercepts.push(pt);
+    }
+    if(isTarget){
+      closestTargetInfo = pt;
+      minTargetDist = pt.minDist;
+    }
+  }
+
+  currentPrediction = {
+    points,
+    impactInfo,
+    futureIntercept: closestTargetInfo,
+    allFutureIntercepts,
+    minTargetDist
+  };
+
+  // 渲染 3D 軌道預測線 (無跳動、零記憶體分配之連續平滑微光線條)
+  if(prediction3dLine && scene3d){
+    if(points.length > 1){
+      const posAttr = prediction3dLine.geometry.attributes.position;
+      const array = posAttr.array;
+      const count = Math.min(points.length, maxPredPoints);
+      for(let i = 0; i < count; i++){
+        array[i * 3]     = points[i].x;
+        array[i * 3 + 1] = 1.5;
+        array[i * 3 + 2] = points[i].y;
+      }
+      posAttr.needsUpdate = true;
+      prediction3dLine.geometry.setDrawRange(0, count);
+      prediction3dLine.computeLineDistances();
+      prediction3dLine.material.color.setHex(impactInfo ? 0xf87171 : 0x34d399);
+      prediction3dLine.material.opacity = impactInfo ? 0.45 : 0.25;
+      prediction3dLine.visible = true;
+    } else {
+      prediction3dLine.visible = false;
+    }
+
+    if(predictionImpact3d){
+      if(impactInfo){
+        predictionImpact3d.position.set(impactInfo.x, 2.2, impactInfo.y);
+        const pulse = 1 + 0.2 * Math.sin(performance.now() * 0.009);
+        predictionImpact3d.scale.set(pulse, pulse, pulse);
+        predictionImpact3d.visible = true;
+      } else {
+        predictionImpact3d.visible = false;
+      }
+    }
+  }
+}
+
 function worldToScreen(x,y){
-  // 將原本的二維物理座標投影成帶有傾角與景深的 3D 風格畫面。
   const dx=x-camera.x,dy=y-camera.y;
-  const c=Math.cos(camera.yaw),s=Math.sin(camera.yaw);
-  const rotatedX=dx*c-dy*s,rotatedY=dx*s+dy*c;
-  const perspective=clamp(1+rotatedY*.00022,.74,1.26);
   return {
-    x:W/2+rotatedX*camera.zoom*perspective,
-    y:H/2+rotatedY*camera.zoom*camera.pitch*perspective,
-    scale:camera.zoom*perspective
+    x:W/2+dx*camera.zoom,
+    y:H/2+dy*camera.zoom,
+    scale:camera.zoom
   };
 }
 
@@ -1082,67 +1428,52 @@ function drawBackground(){
 
 function drawOrbit(p){
   const c=worldToScreen(0,0);
-  ctx.save();ctx.translate(c.x,c.y);ctx.rotate(camera.yaw*.45);
-  // 以兩層橢圓與高光弧線表現傾斜的軌道平面。
-  ctx.scale(1,.68);ctx.strokeStyle='rgba(130,180,230,.18)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(0,0,p.rOrbit*camera.zoom,0,Math.PI*2);ctx.stroke();
-  ctx.scale(1,.62);ctx.strokeStyle='rgba(99,220,255,.08)';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(0,0,p.rOrbit*camera.zoom,0,Math.PI*2);ctx.stroke();
+  ctx.save();
+  ctx.strokeStyle='rgba(80,140,210,.07)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.arc(c.x,c.y,p.rOrbit*camera.zoom,0,Math.PI*2);
+  ctx.stroke();
   ctx.restore();
 }
 
 function drawSun(){
   const s=worldToScreen(0,0);
-  const r=22*s.scale;
-  const g=ctx.createRadialGradient(s.x-r*.3,s.y-r*.35,1,s.x,s.y,72*s.scale);
-  g.addColorStop(0,'rgba(255,255,220,.98)');g.addColorStop(.12,'rgba(255,239,145,.98)');
-  g.addColorStop(.36,'rgba(255,178,50,.72)');g.addColorStop(1,'rgba(255,120,25,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,72*s.scale,0,Math.PI*2);ctx.fill();
-  const disk=ctx.createRadialGradient(s.x-r*.35,s.y-r*.4,1,s.x+r*.25,s.y+r*.2,r*1.1);
-  disk.addColorStop(0,'#fff8bf');disk.addColorStop(.38,'#ffd45e');disk.addColorStop(1,'#dc6a20');
-  ctx.fillStyle=disk;ctx.beginPath();ctx.arc(s.x,s.y,Math.max(7,r),0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(255,231,129,.36)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(s.x,s.y,r*1.4,0,Math.PI*2);ctx.stroke();
+  const r=Math.max(2.5, 0.75*s.scale);
+  const glowR=Math.max(6, 4.5*s.scale);
+  const g=ctx.createRadialGradient(s.x,s.y,r*0.2,s.x,s.y,glowR);
+  g.addColorStop(0,'rgba(255,255,220,.95)');g.addColorStop(.2,'rgba(255,215,80,.8)');
+  g.addColorStop(.6,'rgba(255,140,30,.35)');g.addColorStop(1,'rgba(255,100,20,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,glowR,0,Math.PI*2);ctx.fill();
+  const disk=ctx.createRadialGradient(s.x-r*.3,s.y-r*.35,1,s.x,s.y,r);
+  disk.addColorStop(0,'#fff8bf');disk.addColorStop(.4,'#ffd45e');disk.addColorStop(1,'#dc6a20');
+  ctx.fillStyle=disk;ctx.beginPath();ctx.arc(s.x,s.y,r,0,Math.PI*2);ctx.fill();
 }
 
 function drawPlanets(){
   const tgt=targetPlanet();
   for(const p of planets){
     const s=worldToScreen(p.x,p.y);
-    if(s.x<-60||s.x>W+60||s.y<-60||s.y>H+60)continue;
-    const rr=Math.max(2.5,p.size*s.scale*.78);
-
-    // 行星下方的投影與外圈光暈，讓平面物件有立體浮起來的感覺。
+    if(s.x<-80||s.x>W+80||s.y<-80||s.y>H+80)continue;
+    // 嚴格維持正確物理比例
+    const rr=Math.max(1.8,p.size*s.scale*.75);
     ctx.fillStyle='rgba(0,0,0,.42)';ctx.beginPath();
     ctx.ellipse(s.x+rr*.35,s.y+rr*.75,rr*1.08,rr*.32,0,0,Math.PI*2);ctx.fill();
-    const glow=ctx.createRadialGradient(s.x,s.y,rr*.55,s.x,s.y,rr*2.1);
-    glow.addColorStop(0,'rgba(120,205,255,.12)');glow.addColorStop(1,'rgba(120,205,255,0)');
-    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(s.x,s.y,rr*2.1,0,Math.PI*2);ctx.fill();
 
     if(tgt&&p.name===tgt.name){
-      ctx.strokeStyle='rgba(114,241,184,.8)';ctx.lineWidth=2;
+      ctx.strokeStyle='rgba(52,211,153,.85)';ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(s.x,s.y,rr+10+Math.sin(performance.now()/300)*3,0,Math.PI*2);ctx.stroke();
     }
-
     if(p.ring){
       ctx.save();ctx.translate(s.x,s.y);ctx.rotate(-.25);
       ctx.strokeStyle='rgba(239,216,157,.78)';ctx.lineWidth=Math.max(1,2*s.scale);
-      ctx.beginPath();ctx.ellipse(0,0,rr*2.05,rr*.64,0,0,Math.PI*2);ctx.stroke();
-      ctx.strokeStyle='rgba(117,83,45,.72)';ctx.lineWidth=Math.max(1,1*s.scale);
-      ctx.beginPath();ctx.ellipse(0,0,rr*1.55,rr*.43,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+      ctx.beginPath();ctx.ellipse(0,0,rr*2.35,rr*.74,0,0,Math.PI*2);ctx.stroke();
+      ctx.restore();
     }
-
     const sphere=ctx.createRadialGradient(s.x-rr*.42,s.y-rr*.5,rr*.08,s.x+rr*.28,s.y+rr*.36,rr*1.18);
     sphere.addColorStop(0,'rgba(255,255,255,.92)');sphere.addColorStop(.12,p.color);
     sphere.addColorStop(.62,p.color);sphere.addColorStop(1,'rgba(3,8,18,.95)');
     ctx.fillStyle=sphere;ctx.beginPath();ctx.arc(s.x,s.y,rr,0,Math.PI*2);ctx.fill();
-    if(p.name==='木星'||p.name==='土星'){
-      ctx.save();ctx.beginPath();ctx.arc(s.x,s.y,rr,0,Math.PI*2);ctx.clip();
-      ctx.globalAlpha=.2;ctx.strokeStyle='#fff3c4';ctx.lineWidth=Math.max(1,rr*.15);
-      for(let band=-.55;band<=.55;band+=.28){ctx.beginPath();ctx.moveTo(s.x-rr,s.y+band*rr);ctx.lineTo(s.x+rr,s.y+band*rr);ctx.stroke();}
-      ctx.restore();
-    }
-    ctx.fillStyle='rgba(255,255,255,.45)';ctx.beginPath();ctx.ellipse(s.x-rr*.34,s.y-rr*.42,rr*.18,rr*.1,-.5,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(230,245,255,.9)';ctx.font='12px system-ui';
     ctx.fillText(p.name,s.x+rr+5,s.y-rr-2);
   }
@@ -1150,27 +1481,109 @@ function drawPlanets(){
 
 function drawTrail(){
   if(trail.length<2)return;
-  ctx.strokeStyle='rgba(99,220,255,.75)';ctx.lineWidth=2;
-  ctx.beginPath();
-  const a=worldToScreen(trail[0].x,trail[0].y);ctx.moveTo(a.x,a.y);
-  for(const p of trail){const s=worldToScreen(p.x,p.y);ctx.lineTo(s.x,s.y);}
-  ctx.stroke();
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.lineWidth=1.2;
+  const total=trail.length;
+  const chunks=Math.min(24,Math.max(4,Math.floor(total/15)));
+  const chunkSize=(total-1)/chunks;
+
+  for(let c=0;c<chunks;c++){
+    const startIdx=Math.floor(c*chunkSize);
+    const endIdx=Math.min(total-1,Math.floor((c+1)*chunkSize));
+    if(startIdx>=endIdx)continue;
+
+    const progress=(c+1)/chunks;
+    const alpha=Math.pow(progress,1.8)*0.35;
+    ctx.strokeStyle=`rgba(56,189,248,${alpha.toFixed(3)})`;
+    ctx.beginPath();
+    const p0=worldToScreen(trail[startIdx].x,trail[startIdx].y);
+    ctx.moveTo(p0.x,p0.y);
+    for(let i=startIdx+1;i<=endIdx;i++){
+      const pt=worldToScreen(trail[i].x,trail[i].y);
+      ctx.lineTo(pt.x,pt.y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
+function drawPrediction2D(){
+  const {points, impactInfo}=currentPrediction;
+  if(!points||points.length<2)return;
+  ctx.save();
+  ctx.setLineDash([4, 6]);
+  ctx.strokeStyle=impactInfo?'rgba(248,113,113,.45)':'rgba(52,211,153,.22)';
+  ctx.lineWidth=1.0;
+  ctx.beginPath();
+  const start=worldToScreen(points[0].x,points[0].y);
+  ctx.moveTo(start.x,start.y);
+  for(let i=1;i<points.length;i++){
+    const s=worldToScreen(points[i].x,points[i].y);
+    ctx.lineTo(s.x,s.y);
+  }
+  ctx.stroke();
+
+  if(impactInfo){
+    const s=worldToScreen(impactInfo.x,impactInfo.y);
+    ctx.setLineDash([]);ctx.strokeStyle='#f87171';ctx.lineWidth=2.5;
+    ctx.beginPath();
+    ctx.moveTo(s.x-6,s.y-6);ctx.lineTo(s.x+6,s.y+6);
+    ctx.moveTo(s.x+6,s.y-6);ctx.lineTo(s.x-6,s.y+6);
+    ctx.stroke();
+    ctx.fillStyle='#f87171';ctx.font='bold 11px system-ui';
+    ctx.fillText(`撞擊警告: ${impactInfo.planet}`,s.x+8,s.y+4);
+  }
+
+  // 2D 模式繪製所有行星未來交會幽靈環
+  if(currentPrediction && currentPrediction.allFutureIntercepts){
+    const target=targetPlanet();
+    for(const fi of currentPrediction.allFutureIntercepts){
+      const p = fi.planet;
+      if(!p) continue;
+      const s = worldToScreen(fi.futureX, fi.futureY);
+      const rr = Math.max(p.size * camera.zoom, 3.2);
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = (target && p.name === target.name) ? 'rgba(251, 191, 36, 0.65)' : 'rgba(56, 189, 248, 0.40)';
+      ctx.beginPath(); ctx.arc(s.x, s.y, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = (target && p.name === target.name) ? '#fbbf24' : '#bae6fd';
+      ctx.font = '10px system-ui';
+      ctx.fillText(`${p.name} (預計交會)`, s.x + rr + 4, s.y - 2);
+    }
+  }
+  ctx.restore();
+}
+
+// 飛行器改成極簡發光小點 (Minimalist Glowing Beacon Dot)
 function drawShip(){
   const s=worldToScreen(ship.x,ship.y);
-  ctx.save();ctx.translate(s.x,s.y);ctx.rotate(ship.angle);ctx.scale(Math.max(.72,s.scale),Math.max(.72,s.scale));
-  ctx.shadowColor='rgba(99,220,255,.8)';ctx.shadowBlur=12;
-  ctx.fillStyle='#eaf7ff';
-  ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-6,-5);ctx.lineTo(-3,0);ctx.lineTo(-6,5);ctx.closePath();ctx.fill();
-  ctx.shadowBlur=0;ctx.fillStyle='#718da8';
-  ctx.beginPath();ctx.moveTo(-2,-2);ctx.lineTo(-14,-10);ctx.lineTo(-17,-7);ctx.lineTo(-4,1);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(-2,2);ctx.lineTo(-14,10);ctx.lineTo(-17,7);ctx.lineTo(-4,-1);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#63dcff';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(-12,-8);ctx.moveTo(-2,0);ctx.lineTo(-12,8);ctx.stroke();
-  if(((keys.ArrowUp||keys.w||keys.W||engineEngaged)||demo.thrusting)&&ship.fuel>0){
-    const flame=ctx.createLinearGradient(-4,0,-24,0);flame.addColorStop(0,'#fff3a1');flame.addColorStop(.5,'#ff9a5c');flame.addColorStop(1,'rgba(255,74,76,0)');
-    ctx.fillStyle=flame;ctx.beginPath();ctx.moveTo(-5,-3);ctx.lineTo(-25,0);ctx.lineTo(-5,3);ctx.closePath();ctx.fill();
+  ctx.save();
+  // 點火推進時噴射細微離子光束
+  if(((keys.ArrowUp||keys.w||keys.W)||demo.thrusting)&&ship.fuel>0){
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    ctx.rotate(ship.angle);
+    ctx.strokeStyle='rgba(56,189,248,.95)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(-2,0);
+    ctx.lineTo(-12,0);
+    ctx.stroke();
+    ctx.restore();
   }
+  // 飛行器小點與外圈微暈 (改小為精緻微型小點)
+  ctx.fillStyle='rgba(56,189,248,.35)';
+  ctx.beginPath();
+  ctx.arc(s.x,s.y,3.2,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle='#ffffff';
+  ctx.shadowColor='rgba(56,189,248,.95)';
+  ctx.shadowBlur=4;
+  ctx.beginPath();
+  ctx.arc(s.x,s.y,1.4,0,Math.PI*2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -1180,7 +1593,7 @@ function drawTargetArrow(){
   const x=W/2+Math.cos(ang)*Math.min(W,H)*.36;
   const y=H/2+Math.sin(ang)*Math.min(W,H)*.36;
   ctx.save();ctx.translate(x,y);ctx.rotate(ang);
-  ctx.fillStyle='#72f1b8';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,-6);ctx.lineTo(-7,6);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#34d399';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,-6);ctx.lineTo(-7,6);ctx.closePath();ctx.fill();
   ctx.restore();
 }
 
@@ -1189,81 +1602,300 @@ function updateTelemetry(){
   const tgt=targetPlanet();
   const targetText=tgt?`${tgt.name}（距離 ${Math.hypot(tgt.x-ship.x,tgt.y-ship.y).toFixed(0)}）`:'任務完成';
   if(!ship.dead&&!finished){
-    const modeText=ui.assist.value==='demo'?`<br>展示模式：${demo.phase}，仍須保持安全飛掠距離。`:ui.assist.value==='target'?'<br>自動航向輔助已開啟：系統已為您對準目標，請按住推進器 (W) 前進。':'';
-    const cameraText=firstPerson?'<br>第一視角：鏡頭位於太空梭上，沿船頭方向觀察前方。':'';
-    ui.hud.innerHTML=`<b>下一航點：${targetText}</b><br>綠色箭頭是目標方向；靠近後從側面掠過，讓重力替你轉彎。${modeText}${cameraText}`;
+    const modeText=ui.assist.value==='demo'?`<br><span style="color:var(--yellow)">⚡ 展示模式：${demo.phase}</span>`:'';
+    const cameraText=currentCamMode==='cockpit'?'<br>📷 駕駛艙視角':(currentCamMode==='chase'?'<br>🚀 推進尾隨視角':(currentCamMode==='free'?'<br>🌐 自由全景視角':''));
+    const warningText=currentPrediction.impactInfo?`<br><span style="color:var(--red);font-weight:700">⚠️ 軌跡撞擊警報：即將撞擊 ${currentPrediction.impactInfo.planet}！</span>`:'';
+    ui.hud.innerHTML=`綠色箭頭指示目標；從側面掠過即可借力。${modeText}${cameraText}${warningText}`;
   }
-  ui.speed.textContent=speed.toFixed(1);
-  ui.fuel.textContent=ship.fuel.toFixed(0)+'%';
-  ui.fuelUsed.textContent=ship.fuelUsed.toFixed(1)+'%';
-  ui.burnRate.textContent=demo.burnRate.toFixed(1)+'%/年';
+  const speedKms=(speed*3.384).toFixed(1);
+  ui.speed.textContent=`${speed.toFixed(1)} (${speedKms} km/s)`;
+  const fuelVal = Math.max(0, ship.fuel);
+  ui.fuel.textContent=fuelVal.toFixed(0)+'%';
+  if(fuelVal>50){
+    ui.fuel.style.color='var(--cyan)';
+  }else if(fuelVal>20){
+    ui.fuel.style.color='var(--yellow)';
+  }else{
+    ui.fuel.style.color='var(--red)';
+  }
   ui.closest.textContent=Number.isFinite(ship.closestApproach)?ship.closestApproach.toFixed(0):'—';
   ui.energy.textContent=solarEnergy().toFixed(0);
   ui.boosts.textContent=`${ship.boosts} 次`;
-  ui.missionTime.textContent=missionTime.toFixed(1)+' 年';
-  ui.power.textContent=power.toFixed(0)+'%';
-  ui.powerMeter.value=power;ui.fuelMeter.value=ship.fuel;
-  if(ship.fuel<=20&&!fuelLowLogged){fuelLowLogged=true;addLog('燃料低於 20%，請留意推進操作。','warning');}
-  if(ship.fuel<=0&&!fuelEmptyLogged){
-    fuelEmptyLogged=true;addLog('燃料已耗盡，推進器無法提供推力。','error');
-    if(engineEngaged){engineEngaged=false;ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';}
+  ui.missionTime.textContent=missionTime.toFixed(2)+' 年';
+
+  // 預測最近飛掠距離
+  if(currentPrediction.impactInfo){
+    ui.predictedClosest.innerHTML='<span style="color:var(--red)">撞擊警告!</span>';
+  }else if(Number.isFinite(currentPrediction.minTargetDist)&&currentPrediction.minTargetDist<800){
+    const safe=currentPrediction.minTargetDist>30?'(可助推)':'(過近)';
+    ui.predictedClosest.innerHTML=`<span style="color:var(--green)">${currentPrediction.minTargetDist.toFixed(0)} ${safe}</span>`;
+  }else{
+    ui.predictedClosest.textContent='—';
   }
-  if(power<=20&&!powerLowLogged){powerLowLogged=true;addLog('模擬電力低於 20%。','warning');}
-  if(power<=0&&!powerEmptyLogged){powerEmptyLogged=true;addLog('模擬電力已耗盡；此教育數值不會改變飛行物理。','error');}
-}
-
-function drawFirstPersonFallback(){
-  drawBackground();
-  const heading=ship.angle+firstPersonYaw;
-  const forwardX=Math.cos(heading),forwardY=Math.sin(heading);
-  const rightX=-forwardY,rightY=forwardX;
-  const focal=Math.min(W,H)*.72;
-  const horizon=H/2+Math.tan(firstPersonPitch-.04)*focal;
-  const objects=[
-    {name:'太陽',x:0,y:0,size:34,color:'#ffd45e'},
-    ...planets.map(p=>({name:p.name,x:p.x,y:p.y,size:p.size,color:p.color}))
-  ].map(object=>{
-    const dx=object.x-ship.x,dy=object.y-ship.y;
-    return {...object,depth:dx*forwardX+dy*forwardY,lateral:dx*rightX+dy*rightY};
-  }).filter(object=>object.depth>12).sort((a,b)=>b.depth-a.depth);
-
-  for(const object of objects){
-    const scale=focal/object.depth;
-    const x=W/2+object.lateral*scale;
-    const y=horizon+focal*2.8/object.depth;
-    const radius=clamp(object.size*scale,2,Math.min(W,H)*.5);
-    if(x<-radius*2||x>W+radius*2||y<-radius*2||y>H+radius*2)continue;
-    const glow=ctx.createRadialGradient(x,y,radius*.25,x,y,radius*2.2);
-    glow.addColorStop(0,object.color+'aa');glow.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,radius*2.2,0,Math.PI*2);ctx.fill();
-    const sphere=ctx.createRadialGradient(x-radius*.35,y-radius*.4,radius*.05,x,y,radius);
-    sphere.addColorStop(0,'#ffffff');sphere.addColorStop(.28,object.color);sphere.addColorStop(1,'#080d18');
-    ctx.fillStyle=sphere;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
-    if(radius>5){ctx.fillStyle='rgba(230,245,255,.9)';ctx.font='12px system-ui';ctx.fillText(object.name,x+radius+5,y-radius-2);}
-  }
-
-  // 簡單的駕駛艙框線與瞄準點，讓平面繪圖 fallback 仍清楚呈現前視模式。
-  ctx.fillStyle='rgba(3,10,20,.78)';ctx.beginPath();ctx.moveTo(0,H);ctx.lineTo(0,H*.9);ctx.quadraticCurveTo(W*.5,H*.82,W,H*.9);ctx.lineTo(W,H);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(99,220,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W*.38,H*.94);ctx.quadraticCurveTo(W*.5,H*.875,W*.62,H*.94);ctx.stroke();
-  ctx.strokeStyle='rgba(140,220,255,.72)';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(W/2,H/2,8,0,Math.PI*2);ctx.moveTo(W/2-14,H/2);ctx.lineTo(W/2-5,H/2);ctx.moveTo(W/2+5,H/2);ctx.lineTo(W/2+14,H/2);ctx.moveTo(W/2,H/2-14);ctx.lineTo(W/2,H/2-5);ctx.moveTo(W/2,H/2+5);ctx.lineTo(W/2,H/2+14);ctx.stroke();
 }
 
 function draw2D(){
-  if(firstPerson){drawFirstPersonFallback();updateTelemetry();return;}
-  const savedCamera={...camera};
   drawBackground();
   for(const p of planets)drawOrbit(p);
-  drawSun();drawTrail();drawPlanets();
+  drawSun();drawTrail();drawPrediction2D();drawPlanets();
   drawShip();drawTargetArrow();
+  drawLabelsAndTargets();
   updateTelemetry();
-  Object.assign(camera,savedCamera);
+}
+
+function drawLabelsAndTargets(){
+  if(!labelCtx || !ship) return;
+  labelCtx.clearRect(0, 0, W, H);
+
+  const halfFovRad = 24 * Math.PI / 180;
+  const altitude = 1500 / Math.max(0.005, camera.zoom);
+  const halfHWorld = altitude * Math.tan(halfFovRad);
+  const pxPerUnit = (H / 2) / halfHWorld;
+
+  const toScreen = (wx, wz) => ({
+    x: W / 2 + (wx - view3d.targetX) * pxPerUnit,
+    y: H / 2 + (wz - view3d.targetZ) * pxPerUnit
+  });
+
+  const tgt = targetPlanet();
+
+  // 1. 各天體標籤與小白點
+  const allBodies = [
+    { name: '太陽', x: 0, y: 0, size: 0.75, isSun: true },
+    ...planets
+  ];
+
+  for(const p of allBodies){
+    const s = toScreen(p.x, p.y);
+    const screenR = p.size * pxPerUnit;
+    const isTarget = (tgt && tgt.name === p.name);
+    const onScreen = (s.x >= -80 && s.x <= W + 80 && s.y >= -80 && s.y <= H + 80);
+
+    if (onScreen) {
+      // 若星球太小看不見 (screenR < 6.5) 則用一個小白點顯示
+      if (screenR < 6.5) {
+        labelCtx.save();
+        labelCtx.beginPath();
+        labelCtx.arc(s.x, s.y, isTarget ? 5 : 3.5, 0, Math.PI * 2);
+        labelCtx.fillStyle = isTarget ? 'rgba(251, 191, 36, 0.45)' : (p.isSun ? 'rgba(255, 211, 106, 0.45)' : 'rgba(255, 255, 255, 0.35)');
+        labelCtx.fill();
+
+        labelCtx.beginPath();
+        labelCtx.arc(s.x, s.y, isTarget ? 2.6 : 2.0, 0, Math.PI * 2);
+        labelCtx.fillStyle = isTarget ? '#fbbf24' : '#ffffff';
+        labelCtx.fill();
+        labelCtx.restore();
+      }
+
+      // 目標點清楚標示 (簡潔美觀的高雅雙環鎖定圈)
+      if (isTarget) {
+        labelCtx.save();
+        const pulse = 1.0 + 0.04 * Math.sin(performance.now() * 0.005);
+        const reticleR = Math.max(screenR + 7, 13) * pulse;
+
+        // 外層極淡柔光環
+        labelCtx.strokeStyle = 'rgba(251, 191, 36, 0.25)';
+        labelCtx.lineWidth = 3;
+        labelCtx.beginPath();
+        labelCtx.arc(s.x, s.y, reticleR, 0, Math.PI * 2);
+        labelCtx.stroke();
+
+        // 內層細緻金黃鎖定環
+        labelCtx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
+        labelCtx.lineWidth = 1.4;
+        labelCtx.beginPath();
+        labelCtx.arc(s.x, s.y, reticleR, 0, Math.PI * 2);
+        labelCtx.stroke();
+        labelCtx.restore();
+      }
+
+      // 名字標籤 (極簡微透明質感膠囊)
+      labelCtx.save();
+      const labelText = p.name;
+      labelCtx.font = isTarget
+        ? '600 11.5px system-ui, -apple-system, "Noto Sans TC", sans-serif'
+        : '500 10.5px system-ui, -apple-system, "Noto Sans TC", sans-serif';
+
+      const textWidth = labelCtx.measureText(labelText).width;
+      const padX = 7;
+      const boxH = 18;
+      const boxW = textWidth + padX * 2;
+      const boxX = s.x + Math.max(screenR + 7, isTarget ? 16 : 8);
+      const boxY = s.y - boxH / 2;
+
+      labelCtx.fillStyle = isTarget ? 'rgba(10, 16, 28, 0.85)' : 'rgba(2, 6, 14, 0.72)';
+      labelCtx.strokeStyle = isTarget ? 'rgba(251, 191, 36, 0.75)' : (p.isSun ? 'rgba(255, 211, 106, 0.35)' : 'rgba(255, 255, 255, 0.16)');
+      labelCtx.lineWidth = 1;
+      labelCtx.beginPath();
+      if (labelCtx.roundRect) labelCtx.roundRect(boxX, boxY, boxW, boxH, 4);
+      else labelCtx.rect(boxX, boxY, boxW, boxH);
+      labelCtx.fill();
+      labelCtx.stroke();
+
+      labelCtx.fillStyle = isTarget ? '#fbbf24' : (p.isSun ? '#ffd36a' : '#e2e8f0');
+      labelCtx.textBaseline = 'middle';
+      labelCtx.fillText(labelText, boxX + padX, boxY + boxH / 2);
+      labelCtx.restore();
+    } else if (isTarget) {
+      // 目標點在視野外：簡潔美觀的邊緣指針
+      labelCtx.save();
+      const margin = 42;
+      const cx = W / 2, cy = H / 2;
+      const dx = s.x - cx, dy = s.y - cy;
+      const angle = Math.atan2(dy, dx);
+      const edgeDistX = (W / 2) - margin;
+      const edgeDistY = (H / 2) - margin;
+      const scaleX = Math.abs(dx) > 0.001 ? edgeDistX / Math.abs(dx) : 1000;
+      const scaleY = Math.abs(dy) > 0.001 ? edgeDistY / Math.abs(dy) : 1000;
+      const minScale = Math.min(scaleX, scaleY);
+      const arrowX = cx + dx * minScale;
+      const arrowY = cy + dy * minScale;
+
+      const worldDist = Math.hypot(p.x - ship.x, p.y - ship.y);
+      const distAU = (worldDist / 160).toFixed(1);
+      const edgeText = `${p.name} · ${distAU} AU`;
+
+      labelCtx.fillStyle = '#fbbf24';
+      labelCtx.save();
+      labelCtx.translate(arrowX, arrowY);
+      labelCtx.rotate(angle);
+      labelCtx.beginPath();
+      labelCtx.moveTo(9, 0);
+      labelCtx.lineTo(-5, -5);
+      labelCtx.lineTo(-2, 0);
+      labelCtx.lineTo(-5, 5);
+      labelCtx.closePath();
+      labelCtx.fill();
+      labelCtx.restore();
+
+      labelCtx.font = '600 11px system-ui, -apple-system, "Noto Sans TC", sans-serif';
+      const textW = labelCtx.measureText(edgeText).width;
+      const eBoxW = textW + 12;
+      const eBoxH = 19;
+      const eBoxX = clamp(arrowX - eBoxW / 2, 10, W - eBoxW - 10);
+      const eBoxY = clamp(arrowY + (dy > 0 ? -26 : 14), 10, H - eBoxH - 10);
+
+      labelCtx.fillStyle = 'rgba(10, 16, 28, 0.88)';
+      labelCtx.strokeStyle = 'rgba(251, 191, 36, 0.75)';
+      labelCtx.lineWidth = 1;
+      labelCtx.beginPath();
+      if (labelCtx.roundRect) labelCtx.roundRect(eBoxX, eBoxY, eBoxW, eBoxH, 4);
+      else labelCtx.rect(eBoxX, eBoxY, eBoxW, eBoxH);
+      labelCtx.fill();
+      labelCtx.stroke();
+
+      labelCtx.fillStyle = '#fbbf24';
+      labelCtx.textBaseline = 'middle';
+      labelCtx.fillText(edgeText, eBoxX + 6, eBoxY + eBoxH / 2);
+      labelCtx.restore();
+    }
+  }
+
+  // 2. 標記航海家號信標 (精緻微型微光)
+  const shipPos = toScreen(ship.x, ship.y);
+  if (shipPos.x >= -30 && shipPos.x <= W + 30 && shipPos.y >= -30 && shipPos.y <= H + 30) {
+    const shipScreenR = 0.12 * pxPerUnit;
+    if (shipScreenR < 4) {
+      labelCtx.save();
+      labelCtx.beginPath();
+      labelCtx.arc(shipPos.x, shipPos.y, 3, 0, Math.PI * 2);
+      labelCtx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      labelCtx.fill();
+      labelCtx.beginPath();
+      labelCtx.arc(shipPos.x, shipPos.y, 1.4, 0, Math.PI * 2);
+      labelCtx.fillStyle = '#38bdf8';
+      labelCtx.fill();
+      labelCtx.restore();
+    }
+  }
+
+  // 3. 預判所有行星公轉未來交會標記與相關資訊 (Future Intercepts for ALL Planets)
+  if(currentPrediction && currentPrediction.allFutureIntercepts && currentPrediction.allFutureIntercepts.length > 0){
+    for(const fi of currentPrediction.allFutureIntercepts){
+      const p = fi.planet;
+      if(!p) continue;
+      const isTarget = tgt && p.name === tgt.name;
+      const worldDistMoved = Math.hypot(fi.futureX - p.x, fi.futureY - p.y);
+
+      // 當行星隨時間位移顯著，或是交會航路上的關鍵天體時標示
+      if(worldDistMoved > 5 || isTarget || fi.minDist < 100){
+        const s = toScreen(fi.futureX, fi.futureY);
+        if(s.x >= -80 && s.x <= W + 80 && s.y >= -80 && s.y <= H + 80){
+          labelCtx.save();
+          const rGhost = Math.max(p.size * pxPerUnit, 3.2);
+
+          // 行星未來位置幽靈虛線環
+          labelCtx.setLineDash([3, 3]);
+          labelCtx.strokeStyle = isTarget ? 'rgba(251, 191, 36, 0.65)' : 'rgba(56, 189, 248, 0.40)';
+          labelCtx.lineWidth = isTarget ? 1.2 : 0.9;
+          labelCtx.beginPath();
+          labelCtx.arc(s.x, s.y, rGhost, 0, Math.PI * 2);
+          labelCtx.stroke();
+          labelCtx.setLineDash([]);
+
+          // 若軌道極近 (接近近拱點)，繪製軌道至行星未來點的細微引導虛線
+          if(fi.minDist < 80){
+            const sTraj = toScreen(fi.trajX, fi.trajY);
+            labelCtx.beginPath();
+            labelCtx.setLineDash([2, 3]);
+            labelCtx.strokeStyle = isTarget ? 'rgba(251, 191, 36, 0.35)' : 'rgba(56, 189, 248, 0.22)';
+            labelCtx.moveTo(s.x, s.y);
+            labelCtx.lineTo(sTraj.x, sTraj.y);
+            labelCtx.stroke();
+            labelCtx.setLineDash([]);
+          }
+
+          // 顯示未來交會資訊：天體名稱、到達時間 (+XXs)、交會最近距
+          labelCtx.font = '500 10.5px system-ui, -apple-system, sans-serif';
+          labelCtx.fillStyle = isTarget ? 'rgba(251, 191, 36, 0.90)' : 'rgba(186, 230, 253, 0.65)';
+          const timeText = fi.encounterTime > 0 ? ` +${fi.encounterTime.toFixed(0)}s` : '';
+          const distText = fi.minDist < 999 ? ` · 距${fi.minDist.toFixed(0)}` : '';
+          labelCtx.fillText(`${p.name} (預計交會${timeText}${distText})`, s.x + rGhost + 5, s.y - 3);
+          labelCtx.restore();
+        }
+      }
+    }
+  }
+
+  // 4. 右鍵拉線控制指示器 (細緻、不明顯且簡潔的高雅導引)
+  if(rightDrag.active && rightDrag.power > 0){
+    const sPos = toScreen(ship.x, ship.y);
+    const targetX = rightDrag.currentX;
+    const targetY = rightDrag.currentY;
+
+    labelCtx.save();
+
+    // 細緻半透明微光曳引虛線
+    labelCtx.setLineDash([4, 3]);
+    labelCtx.strokeStyle = 'rgba(125, 211, 252, 0.38)';
+    labelCtx.lineWidth = 1.0;
+    labelCtx.beginPath();
+    labelCtx.moveTo(sPos.x, sPos.y);
+    labelCtx.lineTo(targetX, targetY);
+    labelCtx.stroke();
+    labelCtx.setLineDash([]);
+
+    // 游標端點精緻微光小圓點
+    labelCtx.fillStyle = 'rgba(224, 242, 254, 0.85)';
+    labelCtx.beginPath();
+    labelCtx.arc(targetX, targetY, 2.2, 0, Math.PI * 2);
+    labelCtx.fill();
+
+    // 簡潔無框微光百分比數值
+    const powerPct = Math.round(rightDrag.power * 100);
+    labelCtx.font = '500 10px monospace';
+    labelCtx.fillStyle = 'rgba(186, 230, 253, 0.7)';
+    labelCtx.fillText(`${powerPct}%`, targetX + 7, targetY - 4);
+
+    labelCtx.restore();
+  }
 }
 
 function draw(){
   if(!ship)return;
   if(!renderer3d||!scene3d||!camera3d){
     if(ctx){draw2D();return;}
-    ui.hud.innerHTML='<b style="color:#ffd166">畫面載入中</b><br>請重新整理頁面。';
+    ui.hud.innerHTML='<b style="color:var(--yellow)">畫面載入中</b><br>請重新整理頁面。';
     return;
   }
   for(const p of planets){
@@ -1274,141 +1906,201 @@ function draw(){
   }
   sun3d.rotation.y+=.0007;
   ship3d.position.set(ship.x,0,ship.y);ship3d.rotation.y=-ship.angle;
-  ship3d.visible=!firstPerson;
-  const engineOn=(keys.ArrowUp||keys.w||keys.W||engineEngaged||demo.thrusting)&&ship.fuel>0&&!ship.dead;
-  if(flameOuter3d&&flameInner3d&&flameLight3d){
-    flameOuter3d.visible=engineOn;flameInner3d.visible=engineOn;flameLight3d.intensity=engineOn?1.6:0;
-    if(engineOn){
-      const pulse=.86+.18*Math.sin(performance.now()*.035);
-      flameOuter3d.scale.set(1,pulse,1);flameInner3d.scale.set(1,.78+.15*Math.sin(performance.now()*.048),1);
-    }
-  }
+  ship3d.visible=true;
+  const engineOn=(keys.ArrowUp||keys.w||keys.W||demo.thrusting||(rightDrag.active&&rightDrag.power>0.02))&&ship.fuel>0&&!ship.dead;
+  if(flameLight3d) flameLight3d.intensity=engineOn?2.4:0;
   if(trailDirty)updateTrail3D();
 
-  if(firstPerson){
-    const forwardX=Math.cos(ship.angle),forwardZ=Math.sin(ship.angle);
-    // 將鏡頭放在駕駛艙位置；視線零偏移時與船頭方向完全一致。
-    const eye=new THREE.Vector3(ship.x-forwardX,2.8,ship.y-forwardZ);
-    const heading=ship.angle+firstPersonYaw,pitch=firstPersonPitch-.04;
-    const direction=new THREE.Vector3(
-      Math.cos(heading)*Math.cos(pitch),Math.sin(pitch),Math.sin(heading)*Math.cos(pitch)
-    );
-    const lookTarget=eye.clone().addScaledVector(direction,400);
-    camera3d.position.copy(eye);camera3d.up.set(0,1,0);
-    const firstPersonFov=clamp(72-(camera.zoom-1)*24,40,86);
-    if(camera3d.fov!==firstPersonFov){camera3d.fov=firstPersonFov;camera3d.updateProjectionMatrix();}
-    camera3d.lookAt(lookTarget);
-  }else{
-    if(!view3d.manualTarget){
-      view3d.targetX+=(ship.x-view3d.targetX)*.08;view3d.targetZ+=(ship.y-view3d.targetZ)*.08;
-    }
-    const target3d=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
-    const distance=1180/Math.max(.45,camera.zoom);
-    const horizontalDistance=distance*Math.cos(view3d.pitch);
-    const desiredCamera=target3d.clone().add(new THREE.Vector3(
-      Math.sin(view3d.yaw)*horizontalDistance,
-      Math.sin(view3d.pitch)*distance,
-      Math.cos(view3d.yaw)*horizontalDistance
-    ));
-    camera3d.position.lerp(desiredCamera,.08);camera3d.up.set(0,1,0);
-    if(camera3d.fov!==48){camera3d.fov=48;camera3d.updateProjectionMatrix();}
-    camera3d.lookAt(target3d);
+  // 100% 正上方垂直俯瞰 (Top-down Overhead View)
+  if(!view3d.manualTarget){
+    view3d.targetX += (ship.x - view3d.targetX) * 0.16;
+    view3d.targetZ += (ship.y - view3d.targetZ) * 0.16;
   }
+  const target3d=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
+  const altitude=1500 / Math.max(0.005, camera.zoom);
+  camera3d.position.set(view3d.targetX, altitude, view3d.targetZ);
+  camera3d.up.set(0, 0, -1);
+  camera3d.lookAt(target3d);
+  if(camera3d.fov!==48){camera3d.fov=48;camera3d.updateProjectionMatrix();}
   renderer3d.render(scene3d,camera3d);
-
+  drawLabelsAndTargets();
   updateTelemetry();
 }
 
 function step(t){
-  const simDt=Math.min((t-last)/1000,.035)*Number(ui.timeScale.value);last=t;
-  if(running){
-    const substeps=Math.max(1,Math.ceil(simDt/.028));
-    const dt=simDt/substeps;
-    for(let i=0;i<substeps;i++){
-      updatePlanets(dt);
-      updateShip(dt);
-      if(ship.dead||finished)break;
+  requestAnimationFrame(step);
+  try{
+    const realDt=Math.min((t-last)/1000,.04);last=t;
+    const simDt=realDt*Number(ui.timeScale.value);
+    if(running){
+      const substeps=Math.max(1,Math.ceil(simDt/.028));
+      const dt=simDt/substeps;
+      for(let i=0;i<substeps;i++){
+        updatePlanets(dt);
+        updateShip(dt);
+        if(ship.dead||finished)break;
+      }
     }
-    const thrustActive=Boolean(keys.ArrowUp||keys.w||keys.W||engineEngaged||demo.thrusting);
-    power=Math.max(0,power-simDt*(.002+(thrustActive ? .012 : 0)));
-    if(!view3d.manualTarget){
-      camera.x+=(ship.x-camera.x)*Math.min(1,simDt*3);
-      camera.y+=(ship.y-camera.y)*Math.min(1,simDt*3);
-    }
-    camera.zoom+=(Number(ui.zoom.value)-camera.zoom)*Math.min(1,simDt*5);
+    // 相機位置跟隨平滑與縮放，即使暫停時也即時響應！
+    camera.x+=(ship.x-camera.x)*Math.min(1,realDt*5);
+    camera.y+=(ship.y-camera.y)*Math.min(1,realDt*5);
+    camera.zoom+=(Number(ui.zoom.value)-camera.zoom)*Math.min(1,realDt*12);
+
+    updateTrajectoryPrediction();
+    draw();
+  }catch(err){
+    window.__lastErr = err;
+    console.error("Simulation loop error:", err);
   }
-  draw();requestAnimationFrame(step);
 }
 
 function holdButton(el,key){
-  const on=e=>{e.preventDefault();if(!keys[key])addLog(`${key==='ArrowUp'?'推進':key==='ArrowLeft'?'左轉':'右轉'}控制已輸入。`);keys[key]=true};
+  if(!el) return;
+  const on=e=>{e.preventDefault();keys[key]=true};
   const off=e=>{e.preventDefault();keys[key]=false};
   el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
 }
-holdButton(ui.left,'ArrowLeft');holdButton(ui.right,'ArrowRight');holdButton(ui.thrust,'ArrowUp');
+if(ui.left) holdButton(ui.left,'ArrowLeft');
+if(ui.right) holdButton(ui.right,'ArrowRight');
+if(ui.thrust) holdButton(ui.thrust,'ArrowUp');
+
+if(ui.btnLaunch) ui.btnLaunch.onclick = launchShip;
+
+const btnRecenter = $('btnRecenter');
+if(btnRecenter){
+  btnRecenter.onclick=()=>{
+    view3d.manualTarget=false;
+    showEvent('視野已重新居中鎖定推進器小球');
+  };
+}
 
 addEventListener('keydown',e=>{
-  if(['ArrowLeft','ArrowRight','ArrowUp',' ','w','a','d','W','A','D'].includes(e.key))e.preventDefault();
-  if(e.key===' '){if(!e.repeat){running=!running;syncPauseLabel();addLog(running?'模擬繼續執行。':'模擬已暫停。');}}
-  else{
-    if(!keys[e.key]&&['ArrowLeft','ArrowRight','ArrowUp','a','A','d','D','w','W'].includes(e.key))addLog(`${e.key==='ArrowUp'||e.key==='w'||e.key==='W'?'推進':e.key==='ArrowLeft'||e.key==='a'||e.key==='A'?'左轉':'右轉'}控制已輸入。`);
-    keys[e.key]=true;
+  if(e.key==='Escape'){
+    ui.instructionsModal.style.display='none';
+    return;
   }
+  if(!ui.startScreen.classList.contains('hidden')){
+    if(e.key==='Enter'||e.key===' '||e.key==='w'||e.key==='W'){
+      ui.startScreen.classList.add('hidden');
+      running=true;
+      syncPauseLabel();
+      return;
+    }
+  }
+  if(['ArrowLeft','ArrowRight','ArrowUp',' ','w','a','d','W','A','D'].includes(e.key))e.preventDefault();
+  if(e.key===' '){running=!running;syncPauseLabel();}
+  else keys[e.key]=true;
 });
 addEventListener('keyup',e=>keys[e.key]=false);
 
-ui.pause.onclick=()=>{if(!ship.dead&&!finished){running=!running;syncPauseLabel();addLog(running?'模擬繼續執行。':'模擬已暫停。');}};
-ui.engineToggle.onclick=()=>{
-  if(!engineEngaged&&ship.fuel<=0){addLog('燃料已耗盡，無法啟動推進器。','warning');return;}
-  engineEngaged=!engineEngaged;
-  ui.engineToggle.setAttribute('aria-pressed',String(engineEngaged));
-  ui.engineToggle.textContent=engineEngaged?'推進器停止':'推進器啟動';
-  addLog(engineEngaged?'推進器已啟動。':'推進器已停止。');
+ui.pause.onclick=()=>{if(!ship.dead&&!finished){running=!running;syncPauseLabel();}};
+ui.timeScale.oninput=()=>ui.timeVal.textContent=Number(ui.timeScale.value).toFixed(2)+'×';
+ui.zoom.oninput=()=>{
+  const z=Number(ui.zoom.value);
+  ui.zoomVal.textContent=z<0.1?z.toFixed(3)+'×':(z>=10?z.toFixed(1)+'×':z.toFixed(2)+'×');
+  camera.zoom=z;
 };
-ui.timeScale.oninput=()=>ui.timeVal.textContent=Number(ui.timeScale.value).toFixed(1)+'×';
-ui.thrustScale.oninput=()=>ui.thrustVal.textContent=Number(ui.thrustScale.value).toFixed(1)+'×';
-ui.zoom.oninput=()=>ui.zoomVal.textContent=Number(ui.zoom.value).toFixed(2)+'×';
+ui.predictSteps.oninput=()=>{
+  const val=Number(ui.predictSteps.value);
+  ui.predictVal.textContent=val<=0?'關閉':`${val} 步`;
+  ui.predictVal.style.color=val<=0?'var(--muted)':'var(--green)';
+};
+
 ui.assist.onchange=()=>{
   if(ui.assist.value==='demo'){
-    if(engineEngaged){engineEngaged=false;ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';addLog('切換輔助模式，已關閉手動推進器。');}
-    ui.engineToggle.disabled=true;
-  }else{
-    ui.engineToggle.disabled=false;
-  }
-  if(ui.assist.value==='demo'){
-    running=true;
-    syncPauseLabel();
+    running=true;syncPauseLabel();
     ui.timeScale.value='5';ui.timeScale.oninput();
     ui.zoom.value='0.85';ui.zoom.oninput();
   }
-  addLog(`飛行輔助已切換：${ui.assist.options[ui.assist.selectedIndex].text}。`);
 };
-ui.reset.onclick=()=>{init();addLog('任務已重新開始。','success');};
-ui.cameraMode.onclick=()=>{
-  firstPerson=!firstPerson;firstPersonYaw=0;firstPersonPitch=0;
-  ui.cameraMode.textContent=firstPerson?'切換為第三視角':'切換為第一視角';
-  addLog(firstPerson?'已切換至第一視角。':'已切換至第三視角。');
-};
-ui.resetView.onclick=()=>{
-  firstPerson=false;firstPersonYaw=0;firstPersonPitch=0;
-  view3d.yaw=-.52;view3d.pitch=.62;
-  view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;
-  camera.x=ship.x;camera.y=ship.y;
-  camera.zoom=1;ui.zoom.value='1';ui.zoom.oninput();
-  ui.cameraMode.textContent='切換為第一視角';
-};
-ui.skip.onclick=()=>{
-  const tgt=targetPlanet();if(!tgt||ship.dead||finished)return;
-  const tangent=Math.atan2(tgt.vy,tgt.vx);
-  const safeDistance=Math.max(tgt.size+58,72);
-  ship.x=tgt.x-Math.cos(tangent)*safeDistance;ship.y=tgt.y-Math.sin(tangent)*safeDistance;
-  ship.vx=tgt.vx+Math.cos(tangent)*35;ship.vy=tgt.vy+Math.sin(tangent)*35;
-  ship.angle=Math.atan2(ship.vy,ship.vx);ship.closestApproach=Infinity;ship.approachSpeed=0;targetEntered=false;ship.clearedPlanet='';ship.clearanceGrace=0;
-  trail=[];trailDirty=true;camera.x=ship.x;camera.y=ship.y;
-  showEvent(`已定位至${tgt.name}外圍，練習安全飛掠`);
-  addLog(`已定位至${tgt.name}外圍，開始練習安全飛掠。`);
-};
+function setCameraMode(mode){
+  currentCamMode=mode;
+  if(ui.cameraModeSelect) ui.cameraModeSelect.value=mode;
+  if(ui.cameraMode){
+    if(mode==='cockpit'){
+      firstPerson=true;firstPersonYaw=0;firstPersonPitch=0;
+      ui.cameraMode.textContent='駕駛艙';
+    }else if(mode==='chase'){
+      firstPerson=false;
+      ui.cameraMode.textContent='尾隨視角';
+    }else if(mode==='free'){
+      firstPerson=false;
+      ui.cameraMode.textContent='自由全景';
+    }else{
+      firstPerson=false;
+      ui.cameraMode.textContent='跟隨推進器';
+    }
+  }
+}
+
+if(ui.cameraModeSelect){
+  ui.cameraModeSelect.onchange=function(){
+    setCameraMode(this.value);
+  };
+}
+
+if(ui.reset) ui.reset.onclick=init;
+if(ui.cameraMode){
+  ui.cameraMode.onclick=()=>{
+    const modes=['follow','chase','cockpit','free'];
+    const nextIdx=(modes.indexOf(currentCamMode)+1)%modes.length;
+    setCameraMode(modes[nextIdx]);
+  };
+}
+if(ui.skip){
+  ui.skip.onclick=()=>{
+    const tgt=targetPlanet();if(!tgt||ship.dead||finished)return;
+    const tangent=Math.atan2(tgt.vy,tgt.vx);
+    const safeDistance=Math.max(tgt.size*1.6+30,55);
+    ship.x=tgt.x-Math.cos(tangent)*safeDistance;ship.y=tgt.y-Math.sin(tangent)*safeDistance;
+    ship.vx=tgt.vx+Math.cos(tangent)*4.2;ship.vy=tgt.vy+Math.sin(tangent)*4.2;
+    ship.angle=Math.atan2(ship.vy,ship.vx);ship.closestApproach=Infinity;ship.approachSpeed=0;targetEntered=false;ship.clearedPlanet='';ship.clearanceGrace=0;
+    trail=[];trailDirty=true;camera.x=ship.x;camera.y=ship.y;
+    showEvent(`已定位至${tgt.name}外圍，練習安全飛掠`);
+  };
+}
+
+// ================= 開始頁面與手冊彈窗控制 =================
+if(ui.btnStartGame){
+  ui.btnStartGame.onclick=()=>{
+    ui.startScreen.classList.add('hidden');
+    running=true;
+    syncPauseLabel();
+  };
+}
+if(ui.btnOpenManual){
+  ui.btnOpenManual.onclick=()=>{
+    ui.instructionsModal.style.display='flex';
+  };
+}
+if(ui.btnManualHeader){
+  ui.btnManualHeader.onclick=()=>{
+    ui.instructionsModal.style.display='flex';
+  };
+}
+if(ui.btnCloseManual){
+  ui.btnCloseManual.onclick=()=>{
+    ui.instructionsModal.style.display='none';
+  };
+}
+if(ui.btnModalUnderstood){
+  ui.btnModalUnderstood.onclick=()=>{
+    ui.instructionsModal.style.display='none';
+    ui.startScreen.classList.add('hidden');
+    running=true;
+    syncPauseLabel();
+  };
+}
+if(ui.btnStartDemo){
+  ui.btnStartDemo.onclick=()=>{
+    ui.startScreen.classList.add('hidden');
+    ui.assist.value='demo';
+    ui.assist.onchange();
+  };
+}
+
+// ================= 3D 視角互動 =================
 function cursorOnOrbitalPlane(e){
   if(!camera3d||!raycaster3d)return null;
   const r=canvas.getBoundingClientRect();
@@ -1421,7 +2113,7 @@ function cursorOnOrbitalPlane(e){
 function setZoomAt(clientX,clientY,z){
   const before=cursorOnOrbitalPlane({clientX,clientY});
   const oldZoom=Number(ui.zoom.value),oldDistance=1180/oldZoom;
-  z=Math.max(.45,Math.min(2.2,z));
+  z=Math.max(0.005,Math.min(200.0,z));
   ui.zoom.value=z;ui.zoom.oninput();
   if(before){
     const oldTarget=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
@@ -1443,8 +2135,34 @@ function pointerCenter(){
 }
 
 canvas.addEventListener('pointerdown',e=>{
+  if(e.button===2){
+    e.preventDefault();
+    rightDrag.active=true;
+    rightDrag.pointerId=e.pointerId;
+    rightDrag.startX=e.clientX;
+    rightDrag.startY=e.clientY;
+    rightDrag.currentX=e.clientX;
+    rightDrag.currentY=e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+    if(ship){
+      const halfFovRad=24*Math.PI/180;
+      const altitude=1500/Math.max(0.005,camera.zoom);
+      const halfHWorld=altitude*Math.tan(halfFovRad);
+      const pxPerUnit=(H/2)/halfHWorld;
+      const shipScreenX=W/2+(ship.x-view3d.targetX)*pxPerUnit;
+      const shipScreenY=H/2+(ship.y-view3d.targetZ)*pxPerUnit;
+      const dx=e.clientX-shipScreenX,dy=e.clientY-shipScreenY;
+      const dist=Math.hypot(dx,dy);
+      if(dist>8){
+        rightDrag.angle=Math.atan2(dy,dx);
+        rightDrag.power=clamp((dist-8)/160,0,1);
+      }else{
+        rightDrag.power=0;
+      }
+    }
+    return;
+  }
   if(e.button!==0)return;
-  view3d.manualTarget=true;
   if(e.pointerType==='touch'){
     activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
     canvas.setPointerCapture(e.pointerId);
@@ -1457,18 +2175,37 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
-  e.preventDefault();
   view3d.dragging=true;view3d.lastX=e.clientX;view3d.lastY=e.clientY;canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor='grabbing';
 });
 canvas.addEventListener('pointermove',e=>{
+  if(rightDrag.active&&rightDrag.pointerId===e.pointerId){
+    rightDrag.currentX=e.clientX;
+    rightDrag.currentY=e.clientY;
+    if(ship){
+      const halfFovRad=24*Math.PI/180;
+      const altitude=1500/Math.max(0.005,camera.zoom);
+      const halfHWorld=altitude*Math.tan(halfFovRad);
+      const pxPerUnit=(H/2)/halfHWorld;
+      const shipScreenX=W/2+(ship.x-view3d.targetX)*pxPerUnit;
+      const shipScreenY=H/2+(ship.y-view3d.targetZ)*pxPerUnit;
+      const dx=e.clientX-shipScreenX,dy=e.clientY-shipScreenY;
+      const dist=Math.hypot(dx,dy);
+      if(dist>8){
+        rightDrag.angle=Math.atan2(dy,dx);
+        rightDrag.power=clamp((dist-8)/160,0,1);
+      }else{
+        rightDrag.power=0;
+      }
+    }
+    return;
+  }
   if(e.pointerType==='touch'){
     if(!activePointers.has(e.pointerId))return;
     activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
     if(activePointers.size>=2){
       const center=pointerCenter();
       const distance=Math.max(1,pointerDistance());
-      // 併攏（距離變小）放大，張開（距離變大）縮小。
       setZoomAt(center.x,center.y,pinchStartZoom*pinchStartDistance/distance);
       return;
     }
@@ -1476,17 +2213,20 @@ canvas.addEventListener('pointermove',e=>{
   if(!view3d.dragging)return;
   const dx=e.clientX-view3d.lastX,dy=e.clientY-view3d.lastY;
   view3d.lastX=e.clientX;view3d.lastY=e.clientY;
-  if(firstPerson){
-    firstPersonYaw-=dx*.006;firstPersonPitch=clamp(firstPersonPitch+dy*.005,-1.45,1.45);
-  }else if(renderer3d&&camera3d){
-    view3d.yaw-=dx*.006;view3d.pitch=clamp(view3d.pitch+dy*.005,-1.45,1.45);
-  }else{
-    const zoom=Math.max(.45,camera.zoom),pitch=Math.max(.3,camera.pitch),c=Math.cos(camera.yaw),s=Math.sin(camera.yaw);
-    const shiftedX=-dx/(zoom),shiftedY=-dy/(zoom*pitch);
-    camera.x+=shiftedX*c+shiftedY*s;camera.y-=shiftedX*s;camera.y+=shiftedY*c;
-  }
+  // 純俯視下精確 1:1 拖曳平移星圖視野
+  const altitude=1500 / Math.max(0.005, camera.zoom);
+  const factor=(altitude * 0.8905) / Math.max(1, H);
+  view3d.targetX -= dx * factor;
+  view3d.targetZ -= dy * factor;
+  view3d.manualTarget = true;
 });
 canvas.addEventListener('pointerup',e=>{
+  if(rightDrag.active&&(e.button===2||e.pointerId===rightDrag.pointerId)){
+    rightDrag.active=false;
+    rightDrag.power=0;
+    if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+    return;
+  }
   if(e.pointerType==='touch'){
     activePointers.delete(e.pointerId);
     if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
@@ -1497,37 +2237,32 @@ canvas.addEventListener('pointerup',e=>{
     }
     return;
   }
-  view3d.dragging=false;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);canvas.style.cursor='grab';
+  view3d.dragging=false;canvas.releasePointerCapture(e.pointerId);canvas.style.cursor='grab';
 });
 canvas.addEventListener('pointercancel',e=>{
+  if(rightDrag.active){
+    rightDrag.active=false;
+    rightDrag.power=0;
+  }
   if(e.pointerType==='touch')activePointers.delete(e.pointerId);
   view3d.dragging=false;canvas.style.cursor='grab';
 });
 canvas.style.cursor='grab';
 
-function isMouseWheelEvent(e){
-  // 垂直滾輪（含不提供 wheelDelta 的瀏覽器）用於縮放；水平觸控板手勢保留為視角旋轉。
-  return e.deltaX===0;
-}
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('contextmenu',e=>e.preventDefault());
+
+canvas.addEventListener('dblclick',()=>{
+  view3d.manualTarget=false;
+  showEvent('視野已重新居中鎖定推進器小球');
+});
 
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
-  if(e.ctrlKey||isMouseWheelEvent(e)){
-    const oldZoom=Number(ui.zoom.value);
-    const z=oldZoom*(e.deltaY<0?1.1:.9);
-    setZoomAt(e.clientX,e.clientY,z);
-    return;
-  }
-  if(firstPerson){
-    firstPersonYaw-=e.deltaX*.0015;
-    firstPersonPitch=clamp(firstPersonPitch+e.deltaY*.0015,-1.45,1.45);
-    return;
-  }
-  // 觸控板雙指捲動繞場景原點旋轉整個宇宙視角，不跟隨飛船。
-  view3d.manualTarget=true;
-  view3d.targetX=0;view3d.targetZ=0;
-  view3d.yaw-=e.deltaX*.0015;
-  view3d.pitch=clamp(view3d.pitch+e.deltaY*.0015,-1.45,1.45);
+  const oldZoom=Number(ui.zoom.value);
+  const factor=e.deltaY<0?1.18:0.85;
+  const z=clamp(oldZoom*factor, 0.005, 200.0);
+  ui.zoom.value=z;ui.zoom.oninput();
 },{passive:false});
 
 setup3D();init();requestAnimationFrame(step);
