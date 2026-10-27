@@ -5,218 +5,425 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>航海家號：太陽系引力彈弓任務｜3D game_3</title>
 <style>
-:root{
-  --bg:#030711;--panel:#0a1424;--panel2:#10213a;--text:#edf7ff;--muted:#9fb6c9;
-  --cyan:#63dcff;--yellow:#ffd166;--green:#72f1b8;--red:#ff7b87;--purple:#b99cff;
+
+:root {
+  color-scheme: dark;
+  --bg: #050a14;
+  --surface: #0b1220;
+  --surface-raised: #101a2a;
+  --line: rgba(128, 165, 198, 0.18);
+  --line-strong: rgba(0, 204, 255, 0.32);
+  --text: #e7eff8;
+  --muted: #8fa4b9;
+  --cyan: #35d8ff;
+  --cyan-soft: #9beeff;
+  --purple: #a78bfa;
+  --green: #51e0ae;
+  --yellow: #f6c96b;
+  --red: #ff7c8a;
 }
-*{box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden}
-body{
-  margin:0;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;
-  background:radial-gradient(circle at 50% 30%,#102b4d 0,#050b16 44%,#02050b 100%);
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body {
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-header,footer{display:none}
-header{max-width:1500px;margin:auto;padding:18px 22px 8px}
-h1{margin:0 0 6px;font-size:clamp(24px,4vw,40px)}
-.subtitle{color:var(--muted);line-height:1.65;max-width:1100px}
-main{
-  position:relative;width:100vw;height:100dvh;max-width:none;margin:0;padding:0;display:block;
+button, select, input { font: inherit; }
+button { color: inherit; }
+.mission-console {
+  display: grid;
+  grid-template-columns: minmax(248px, 270px) minmax(0, 1fr) minmax(270px, 300px);
+  grid-template-rows: 64px minmax(0, 1fr) 132px;
+  gap: 12px;
+  width: 100vw;
+  height: 100dvh;
+  padding: 12px;
+  background: radial-gradient(ellipse at 54% 45%, #0b1930 0, #050a14 68%);
 }
-.card{
-  background:rgba(8,19,35,.93);border:1px solid rgba(150,210,255,.15);
-  border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.34);overflow:hidden
+.mission-header {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(240px, 1.2fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: linear-gradient(110deg, rgba(14, 24, 40, .96), rgba(8, 14, 25, .96));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
 }
-.stage{position:fixed;inset:0;width:100vw;height:100dvh;min-height:0;border:0;border-radius:0;overflow:hidden}
-canvas{display:block;width:100%;height:100%;touch-action:none}
-#spaceFallback{position:absolute;inset:0;z-index:0;pointer-events:none}
-.stage{background:
-  radial-gradient(circle at 18% 50%,rgba(255,190,86,.08),transparent 24%),
-  linear-gradient(135deg,#06101e,#02050b 70%);}
-.hud{
-  position:absolute;left:22px;top:205px;background:transparent;border:0;border-radius:0;
-  padding:0;font-size:13px;line-height:1.6;max-width:360px;color:#d8e8f7;
-  pointer-events:none
+.brand-group { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid rgba(53, 216, 255, .42);
+  border-radius: 50%;
+  color: var(--cyan);
+  font: 700 15px ui-monospace, SFMono-Regular, Consolas, monospace;
+  box-shadow: inset 0 0 12px rgba(53, 216, 255, .1);
 }
-.miniHelp{
-  display:none
+.brand-copy { min-width: 0; }
+.brand-copy h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .08em; white-space: nowrap; }
+.eyebrow {
+  margin: 0 0 3px;
+  color: var(--cyan);
+  font: 600 9px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .16em;
 }
-aside.telemetry-panel{
-  position:fixed;z-index:5;top:10px;right:12px;width:min(360px,50vw);max-height:calc(100dvh - 32px);
-  transform:scale(.78);transform-origin:top right;
-  padding:4px 0 14px;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:auto;
-  scrollbar-width:none
+.mission-name { display: grid; gap: 3px; text-align: center; }
+.mission-name span, .status-copy span { color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.mission-name strong { font-size: 13px; font-weight: 550; }
+.status-group { display: flex; align-items: center; gap: 9px; min-width: 150px; }
+.status-light {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(81, 224, 174, .65);
 }
-aside.telemetry-panel::-webkit-scrollbar{display:none}
-h2{font-size:18px;margin:0 0 12px}
-.telemetry-panel h2{font-size:25px;margin:0 0 22px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
-.section{margin:16px 0;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)}
-label{display:flex;justify-content:space-between;font-size:16px;margin-bottom:8px;color:#dcecff}
-label b{font-size:20px;color:#edf7ff}
-input[type=range]{width:100%;accent-color:var(--cyan);background:transparent;cursor:pointer}
-button,select{
-  width:100%;padding:11px 12px;border-radius:11px;border:1px solid transparent;
-  background:transparent;color:white;font-size:14px
+.status-copy { display: grid; gap: 3px; }
+.status-copy strong { color: var(--green); font-size: 12px; font-weight: 600; }
+.education-label { color: var(--muted); font-size: 9px; white-space: nowrap; }
+
+.panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: linear-gradient(160deg, rgba(13, 22, 37, .97), rgba(8, 14, 24, .97));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .24);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(53, 216, 255, .28) transparent;
 }
-button{cursor:pointer;font-weight:700}
-button.primary{background:transparent;color:var(--text);border:0}
-.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
-#cameraMode{grid-column:1/-1}
-.action-dock{margin-top:20px;padding-bottom:4px}
-.action-dock h2{display:none}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.stat{background:transparent;border-radius:0;padding:10px 12px}
-.stat span{font-size:13px;color:var(--muted)}
-.stat b{display:block;margin-top:3px;font-size:22px}
-.mission{
-  background:linear-gradient(180deg,rgba(35,70,110,.42),rgba(7,18,32,.5));
-  border-radius:14px;padding:12px;margin-top:12px
+.flight-controls { grid-column: 1; grid-row: 2; padding: 13px; }
+.telemetry-panel { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; gap: 10px; padding: 13px; }
+.panel-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
 }
-.mission ol{padding-left:21px;margin:8px 0 0;color:#dcecff;line-height:1.8}
-.mission-panel{
-  position:absolute;z-index:4;left:22px;top:20px;min-width:190px;max-width:250px;
-  color:#edf7ff;pointer-events:none;text-shadow:0 3px 14px rgba(0,0,0,.9)
+.panel-heading h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.panel-code { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.control-section, .telemetry-block, .mission-panel {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .025);
 }
-.mission-panel .mission-title{font-size:24px;font-weight:700;margin-bottom:10px}
-.mission-panel .target-name{font-size:22px;font-weight:700;color:var(--yellow);line-height:1.5}
-.note{font-size:13px;color:var(--muted);line-height:1.65}
-kbd{background:transparent;border:1px solid rgba(255,255,255,.18);border-bottom-width:3px;border-radius:6px;padding:2px 6px}
-footer{max-width:1500px;margin:auto;padding:0 22px 30px}
-footer .card{padding:18px 20px}
-footer p{line-height:1.8;color:#d8e8f7}
-.learn-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:18px}
-.learn-block{border-top:1px solid rgba(255,255,255,.1);padding-top:15px}
-.learn-block h3{font-size:16px;margin:0 0 10px;color:#edf7ff}
-.learn-block ul,.learn-block ol{margin:0;padding-left:21px;color:#d8e8f7;line-height:1.8}
-.formula-list{display:grid;gap:10px}
-.formula{
-  display:grid;grid-template-columns:minmax(150px,.7fr) minmax(0,1.3fr);gap:10px;
-  border-left:3px solid rgba(99,220,255,.75);padding:8px 0 8px 12px;color:#d8e8f7
+.control-section + .control-section { margin-top: 10px; }
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #bdcbd9;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
-.formula code{font-family:"SFMono-Regular",Consolas,monospace;color:#72f1b8;white-space:normal}
-.example-table{width:100%;border-collapse:collapse;color:#d8e8f7;line-height:1.65}
-.example-table th,.example-table td{padding:9px 8px;border-top:1px solid rgba(255,255,255,.09);vertical-align:top;text-align:left}
-.example-table th{color:#edf7ff;font-size:13px}
-.example-table a{color:#72f1b8;text-decoration:none;border-bottom:1px solid rgba(114,241,184,.45)}
-.example-table a:hover{color:#edf7ff;border-bottom-color:#edf7ff}
-.video-panel{margin-top:16px}
-.video-panel h4{font-size:14px;margin:0 0 8px;color:#edf7ff}
-.video-frame{position:relative;aspect-ratio:16/9;background:#02050b;border:1px solid rgba(255,255,255,.12);overflow:hidden}
-.video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.small-note{color:var(--muted);font-size:13px;line-height:1.7;margin-top:10px}
-.control-dock{position:absolute;z-index:5;inset:0;pointer-events:none}
-.direction-pad{position:absolute;left:22px;bottom:22px;width:138px;height:118px;display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,52px);gap:6px;pointer-events:auto}
-.direction-pad button,.pause-control{
-  display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid rgba(220,241,255,.48);
-  border-radius:12px;background:rgba(2,8,16,.2);color:#edf7ff;font-size:28px;line-height:1;
-  text-shadow:0 2px 10px rgba(0,0,0,.8);backdrop-filter:blur(4px);transition:background .18s,transform .18s
+.direction-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(2, 36px);
+  justify-content: center;
+  gap: 5px;
+  margin: 3px 0 10px;
 }
-.direction-pad button:hover,.direction-pad button:active,.pause-control:hover,.pause-control:active{background:rgba(99,220,255,.22);transform:translateY(-2px)}
-#thrust{grid-column:2;grid-row:1}
-#left{grid-column:1;grid-row:2}
-#right{grid-column:3;grid-row:2}
-.pause-control{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:auto;min-width:172px;height:46px;padding:0 22px;font-size:16px;pointer-events:auto}
-.pause-control:hover,.pause-control:active{transform:translateX(-50%) translateY(-2px)}
-.telemetry-panel .action-dock .buttons button{border-bottom-color:rgba(255,255,255,.22);border-radius:0;color:#cfe8f8;font-weight:500}
-.mission-progress{margin:14px 0 4px;padding:12px 14px;border:1px solid rgba(114,241,184,.18);border-radius:14px;background:rgba(8,24,38,.55)}
-.mission-progress strong{display:block;font-size:14px;color:#72f1b8;margin-bottom:7px}
-.mission-progress ol{margin:0;padding-left:22px;color:#cfe8f8;line-height:1.65;font-size:13px}
-.mission-progress li.active{color:#ffd166;font-weight:700}
-.mission-progress li.done{text-decoration:line-through;color:#7192a7}
-.event-banner{position:absolute;z-index:6;left:50%;top:22px;transform:translateX(-50%) translateY(-12px);opacity:0;pointer-events:none;padding:10px 18px;border:1px solid rgba(114,241,184,.55);border-radius:999px;background:rgba(4,26,38,.9);color:#72f1b8;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .25s,transform .25s;white-space:nowrap}
-.event-banner.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.mission-brief{margin:10px 0 0;color:#b9d1e2;font-size:12px;line-height:1.55}
-@media(max-width:950px){
-  .telemetry-panel{top:10px!important;right:14px!important;width:min(260px,50vw)!important;max-height:52dvh!important}
-  .telemetry-panel h2{font-size:20px;margin-bottom:12px}
-  .mission-panel{left:14px;top:14px;min-width:150px}
-  .mission-panel .mission-title{font-size:20px}
-  .mission-panel .target-name{font-size:18px}
-  .hud{left:14px;top:170px;max-width:240px;font-size:12px}
-  .direction-pad{left:14px;bottom:14px;transform:scale(.88);transform-origin:bottom left}
-  .pause-control{bottom:14px;font-size:14px;min-width:150px}
+#thrust { grid-column: 2; grid-row: 1; }
+#left { grid-column: 1; grid-row: 2; }
+#right { grid-column: 3; grid-row: 2; }
+button {
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid rgba(112, 151, 185, .28);
+  border-radius: 6px;
+  background: #111d2d;
+  color: #dce8f3;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+button:hover { border-color: rgba(53, 216, 255, .55); background: #17283b; }
+button:active { background: #0c1725; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.direction-pad button { min-height: 36px; padding: 0; color: var(--cyan); font-size: 18px; }
+.engine-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.engine-toggle { border-color: rgba(81, 224, 174, .42); color: var(--green); }
+.engine-toggle[aria-pressed="true"] { background: rgba(28, 100, 78, .38); box-shadow: inset 0 0 0 1px rgba(81, 224, 174, .16); }
+.pause-control { width: 100%; }
+.engine-actions button {
+  border-color: rgba(117, 190, 220, .3);
+  background: linear-gradient(180deg, rgba(28, 43, 59, .98), rgba(11, 20, 32, .98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 0 rgba(0, 0, 0, .45);
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.engine-actions .engine-toggle {
+  border-color: rgba(81, 224, 174, .48);
+  background: linear-gradient(180deg, rgba(24, 64, 58, .72), rgba(10, 30, 32, .96));
+  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .1), 0 2px 0 rgba(0, 0, 0, .45), 0 0 10px rgba(81, 224, 174, .08);
+}
+.engine-actions .engine-toggle[aria-pressed="true"] {
+  background: linear-gradient(180deg, rgba(37, 105, 79, .82), rgba(12, 46, 38, .98));
+  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .14), 0 2px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(81, 224, 174, .2);
+}
+.engine-actions .pause-control { border-color: rgba(53, 216, 255, .42); }
+.engine-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(91, 224, 255, .78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 3px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(53, 216, 255, .2);
+}
+.engine-actions .engine-toggle:hover:not(:disabled) {
+  border-color: rgba(112, 255, 202, .8);
+  box-shadow: inset 0 1px 0 rgba(220, 255, 243, .14), 0 3px 0 rgba(0, 0, 0, .45), 0 0 13px rgba(81, 224, 174, .22);
+}
+.engine-actions button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .35), 0 0 6px rgba(53, 216, 255, .12);
+}
+.engine-actions button:disabled { cursor: not-allowed; opacity: .55; }
+.setting-list { display: grid; gap: 10px; }
+.setting-field label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.setting-field label b { color: var(--cyan); font: 600 11px ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
+input[type="range"] { display: block; width: 100%; height: 17px; margin: 0; appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: #344253; }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; background: #344253; }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--cyan); }
+input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -5px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(53, 216, 255, .4); }
+input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(53, 216, 255, .4); }
+select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba(112, 151, 185, .25); border-radius: 5px; background: #0d1724; color: var(--text); font-size: 11px; }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+#cameraMode { grid-column: 1 / -1; }
+
+.mission-panel { border-color: rgba(167, 139, 250, .22); }
+.mission-title { color: var(--muted); font-size: 10px; }
+.target-name { margin-top: 4px; color: var(--cyan); font-size: 19px; font-weight: 650; }
+.mission-brief { margin-top: 6px; color: #b8c7d6; font-size: 10px; line-height: 1.45; }
+.hud { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.45; }
+.hud b { color: var(--text); }
+
+.telemetry-block { padding: 10px; }
+.telemetry-block-heading { display: flex; justify-content: space-between; align-items: center; margin: 0 0 9px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.stat { min-width: 0; padding: 8px; border: 1px solid rgba(112, 151, 185, .14); border-radius: 5px; background: rgba(3, 8, 15, .45); }
+.stat span { display: block; color: var(--muted); font-size: 9px; line-height: 1.3; }
+.stat b { display: block; margin-top: 4px; color: var(--cyan); font: 600 13px ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .unit { display: inline; margin-left: 3px; color: var(--muted); font-size: 9px; }
+.resource-meter { display: block; width: 100%; height: 5px; margin-top: 7px; border: 0; border-radius: 4px; overflow: hidden; background: #202d3b; }
+.resource-meter::-webkit-progress-bar { background: #202d3b; }
+.resource-meter::-webkit-progress-value { border-radius: 4px; background: linear-gradient(90deg, #167e9b, var(--cyan)); }
+.resource-meter::-moz-progress-bar { border-radius: 4px; background: linear-gradient(90deg, #167e9b, var(--cyan)); }
+.power-meter::-webkit-progress-value, .power-meter::-moz-progress-bar { background: linear-gradient(90deg, #6954b6, var(--purple)); }
+.data-notice { margin: 8px 1px 0; color: #71859a; font-size: 9px; line-height: 1.4; }
+
+.flight-log { grid-column: 1 / -1; grid-row: 3; min-height: 0; padding: 10px 13px; border: 1px solid var(--line); border-radius: 9px; background: rgba(9, 15, 26, .95); }
+.log-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 7px; }
+.log-header h2 { margin: 0; color: #c7d4e1; font-size: 11px; font-weight: 600; letter-spacing: .1em; }
+.log-header span { color: var(--muted); font-size: 9px; }
+.flight-log-list { display: grid; gap: 4px; max-height: 78px; overflow-y: auto; margin: 0; padding: 0; list-style: none; scrollbar-width: thin; }
+.log-entry { display: grid; grid-template-columns: 72px 1fr; gap: 8px; color: #b9c7d5; font-size: 10px; line-height: 1.35; }
+.log-entry time { color: #71879b; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.log-entry.warning span { color: var(--yellow); }
+.log-entry.error span { color: var(--red); }
+.log-entry.success span { color: var(--green); }
+.log-entry.control span { color: var(--cyan-soft); }
+.learning-content { width: min(100% - 24px, 1100px); margin: 16px auto 32px; color: var(--text); }
+.learning-content > summary { width: fit-content; padding: 9px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; cursor: pointer; }
+.learning-content[open] > .card { margin-top: 10px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.learning-content .learn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+
+.stage { grid-column: 2; grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid rgba(76, 118, 155, .25); border-radius: 9px; background: #02050b; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.stage-tools { position: absolute; z-index: 4; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; pointer-events: none; }
+.stage-tools span { color: #8ea4b9; font-size: 10px; text-shadow: 0 1px 4px #000; }
+.stage-tools button { padding: 7px 10px; border: 1px solid rgba(99, 220, 255, .35); border-radius: 6px; background: rgba(7, 17, 29, .88); color: #c7e7f4; font: inherit; font-size: 10px; cursor: pointer; pointer-events: auto; }
+.stage-tools button:hover { border-color: rgba(99, 220, 255, .7); background: rgba(10, 35, 51, .95); }
+#spaceFallback { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.event-banner { position: absolute; z-index: 5; top: 16px; left: 50%; max-width: calc(100% - 28px); padding: 9px 13px; border: 1px solid rgba(81, 224, 174, .45); border-radius: 7px; background: rgba(5, 18, 28, .92); color: var(--green); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.event-banner.show { opacity: 1; }
+.education-tag { position: absolute; right: 10px; bottom: 9px; padding: 5px 8px; border: 1px solid rgba(128, 165, 198, .17); border-radius: 5px; background: rgba(5, 10, 20, .68); color: #879aae; font-size: 9px; pointer-events: none; }
+
+@media (max-width: 1100px) {
+  .mission-console { grid-template-columns: minmax(205px, 230px) minmax(0, 1fr); grid-template-rows: 60px minmax(280px, 1fr) auto 120px; }
+  .mission-header { grid-column: 1 / -1; grid-row: 1; }
+  .flight-controls { grid-column: 1; grid-row: 2; }
+  .stage { grid-column: 2; grid-row: 2; }
+  .telemetry-panel { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(200px, .8fr) minmax(0, 1.2fr); align-items: start; }
+  .telemetry-panel > .panel-heading { grid-column: 1 / -1; }
+  .telemetry-panel > .mission-panel { grid-column: 1; }
+  .telemetry-panel > .telemetry-block { grid-column: 2; grid-row: 2 / span 2; }
+  .telemetry-panel > .data-notice { grid-column: 1; }
+  .flight-log { grid-column: 1 / -1; grid-row: 4; }
+  .flight-log-list { max-height: 68px; }
+}
+@media (max-width: 700px) {
+  html, body { height: auto; min-height: 100%; overflow: auto; }
+  .mission-console { width: 100%; height: auto; min-height: 100dvh; overflow: visible; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(320px, 48dvh) auto auto auto; gap: 9px; padding: 9px; }
+  .mission-header { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px; }
+  .brand-copy h1 { font-size: 12px; white-space: normal; }
+  .brand-mark { width: 29px; height: 29px; flex-basis: 29px; }
+  .mission-name { display: none; }
+  .education-label { display: none; }
+  .status-group { min-width: 0; }
+  .stage { grid-column: 1; grid-row: 2; min-height: 320px; }
+  .flight-controls { grid-column: 1; grid-row: 3; }
+  .telemetry-panel { grid-column: 1; grid-row: 4; display: flex; }
+  .telemetry-panel > .telemetry-block { order: 2; }
+  .telemetry-panel > .mission-panel { order: 1; }
+  .telemetry-panel > .data-notice { order: 3; }
+  .flight-log { grid-column: 1; grid-row: 5; min-height: 130px; }
+  .flight-log-list { max-height: 78px; }
+  .learning-content { width: calc(100% - 18px); margin-top: 10px; }
+  .learning-content[open] > .card { padding: 14px; }
 }
 </style>
 </head>
 <body>
-<header>
-  <h1>🚀 航海家號：太陽系引力彈弓任務</h1>
-  <div class="subtitle">
-    從地球附近出發，使用推進器修正航向，靠近不同的行星讓重力幫你轉彎與加速。
-    任務目標是依序飛掠木星、土星、天王星、海王星，最後抵達冥王星。這是一個以 3D 視覺呈現、比例經過壓縮的引力彈弓教學遊戲。
-  </div>
-</header>
-
-<main>
-  <section class="card stage">
-    <canvas id="space"></canvas>
-    <div class="mission-panel" aria-live="polite">
-      <div class="mission-title">下一個航點</div>
-      <div id="targetName" class="target-name">載入中……</div>
-      <div id="missionPhase" class="mission-brief">靠近行星外圍，讓重力替你轉彎。</div>
-    </div>
-    <div class="event-banner" id="eventBanner" aria-live="polite"></div>
-    <div class="hud" id="hud">載入任務中……</div>
-    <div class="control-dock" aria-label="遊戲控制鍵">
-      <div class="direction-pad" aria-label="方向控制">
-        <button id="thrust" aria-label="推進，W 或上方向鍵">↑</button>
-        <button id="left" aria-label="左轉，A 或左方向鍵">←</button>
-        <button id="right" aria-label="右轉，D 或右方向鍵">→</button>
+<main class="mission-console">
+  <header class="mission-header">
+    <div class="brand-group">
+      <div class="brand-mark" aria-hidden="true">V</div>
+      <div class="brand-copy">
+        <p class="eyebrow">DEEP SPACE NAVIGATION</p>
+        <h1>VOYAGER MISSION CONTROL</h1>
       </div>
-      <button id="pause" class="pause-control" aria-label="暫停或繼續，空白鍵">暫停</button>
     </div>
-  </section>
-
-  <aside class="card telemetry-panel">
-    <h2>駕駛控制台</h2>
-
-    <div class="section">
-      <label><span>時間倍率</span><b id="timeVal">1.0×</b></label>
-      <input id="timeScale" type="range" min="0.3" max="5" step="0.1" value="1">
+    <div class="mission-name">
+      <span>任務識別 / MISSION</span>
+      <strong>太陽系重力助推巡航模擬</strong>
     </div>
-
-    <div class="section">
-      <label><span>鏡頭縮放</span><b id="zoomVal">1.0×</b></label>
-      <input id="zoom" type="range" min="0.45" max="2.2" step="0.05" value="1">
+    <div class="status-group" role="status">
+      <span class="status-light" aria-hidden="true"></span>
+      <div class="status-copy"><span>系統狀態</span><strong id="runStatus">模擬執行中</strong></div>
+      <span class="education-label">教育模擬資料</span>
     </div>
+  </header>
 
-    <div class="section">
-      <label><span>飛行輔助</span></label>
-      <select id="assist">
-        <option value="none">手動駕駛</option>
-        <option value="target">自動朝向下一目標</option>
-        <option value="demo">全自動展示模式</option>
-      </select>
+  <aside class="panel flight-controls" aria-label="飛行控制面板">
+    <div class="panel-heading">
+      <div><p class="eyebrow">PILOT INPUT</p><h2>飛行控制</h2></div>
+      <span class="panel-code">01 / RCS</span>
     </div>
 
-    <div class="section stats">
-      <div class="stat"><span>目前速度</span><b id="speed">0</b></div>
-      <div class="stat"><span>剩餘推進劑</span><b id="fuel">100%</b></div>
-      <div class="stat"><span>已耗推進劑</span><b id="fuelUsed">0%</b></div>
-      <div class="stat"><span>推進流量</span><b id="burnRate">0%/年</b></div>
-      <div class="stat"><span>最近行星</span><b id="nearest">地球</b></div>
-      <div class="stat"><span>最近距離</span><b id="closest">—</b></div>
-      <div class="stat"><span>日心能量</span><b id="energy">—</b></div>
-      <div class="stat"><span>成功助推</span><b id="boosts">0 次</b></div>
-      <div class="stat"><span>任務時間</span><b id="missionTime">0 年</b></div>
-    </div>
+    <section class="control-section">
+      <h3 class="section-title"><span>姿態與推進</span><span>MANUAL</span></h3>
+      <div class="direction-pad" aria-label="方向控制">
+        <button id="thrust" type="button" aria-label="推進，W 或上方向鍵">↑</button>
+        <button id="left" type="button" aria-label="左轉，A 或左方向鍵">←</button>
+        <button id="right" type="button" aria-label="右轉，D 或右方向鍵">→</button>
+      </div>
+      <div class="engine-actions">
+        <button id="engineToggle" class="engine-toggle" type="button" aria-pressed="false">推進器啟動</button>
+        <button id="pause" class="pause-control" type="button" aria-label="暫停或繼續，空白鍵">暫停</button>
+      </div>
+    </section>
 
-    <div class="mission-progress">
-      <strong>Voyager 大巡航進度</strong>
-      <ol id="checklist"></ol>
-    </div>
-
-    <div class="section action-dock">
-      <div class="buttons">
-        <button id="reset">重新開始</button>
-        <button id="skip">練習目前航點</button>
+    <section class="control-section">
+      <h3 class="section-title"><span>飛行參數</span><span>SETUP</span></h3>
+      <div class="setting-list">
+        <div class="setting-field">
+          <label for="thrustScale"><span>推進力</span><b id="thrustVal">1.0×</b></label>
+          <input id="thrustScale" type="range" min="0.2" max="2.0" step="0.1" value="1">
+        </div>
+        <div class="setting-field">
+          <label for="timeScale"><span>時間倍率</span><b id="timeVal">1.0×</b></label>
+          <input id="timeScale" type="range" min="0.3" max="5" step="0.1" value="1">
+        </div>
+        <div class="setting-field">
+          <label for="zoom"><span>鏡頭縮放</span><b id="zoomVal">1.0×</b></label>
+          <input id="zoom" type="range" min="0.45" max="2.2" step="0.05" value="1">
+        </div>
+        <div class="setting-field">
+          <label for="assist"><span>飛行輔助</span></label>
+          <select id="assist">
+            <option value="none">手動駕駛</option>
+            <option value="target">自動朝向下一目標</option>
+            <option value="demo">全自動展示模式</option>
+          </select>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button id="reset" type="button">重新開始</button>
+        <button id="skip" type="button">練習目前航點</button>
         <button id="cameraMode" type="button">切換為第一視角</button>
       </div>
-      <div class="mission-brief">玩法：依序從行星旁邊掠過，讓重力改變速度與方向。推進器只用來修正，燃料耗盡仍可靠重力滑行。</div>
-    </div>
+    </section>
+
+    <section class="control-section mission-progress" aria-labelledby="routeTitle">
+      <h3 id="routeTitle" class="section-title"><span>航點序列</span><span>ROUTE</span></h3>
+      <ol id="checklist"></ol>
+    </section>
   </aside>
+
+  <section class="stage" aria-label="3D 太空場景">
+    <canvas id="space"></canvas>
+    <div class="stage-tools">
+      <span id="cameraHint">拖曳旋轉 · 滾輪縮放</span>
+      <button id="resetView" type="button" aria-label="重設太空場景視角">重設視角</button>
+    </div>
+    <div class="event-banner" id="eventBanner" aria-live="polite"></div>
+    <div class="education-tag">教育模擬資料 · 非 NASA 即時遙測</div>
+  </section>
+
+  <aside class="panel telemetry-panel" aria-label="航行遙測面板">
+    <div class="panel-heading">
+      <div><p class="eyebrow">FLIGHT TELEMETRY</p><h2>航行遙測</h2></div>
+      <span class="panel-code">SIM / DATA</span>
+    </div>
+
+    <section class="mission-panel" aria-live="polite">
+      <div class="mission-title">目前目標星球</div>
+      <div id="targetName" class="target-name">載入中……</div>
+      <div id="missionPhase" class="mission-brief">靠近行星外圍，讓重力替你轉彎。</div>
+      <div id="hud" class="hud">載入任務中……</div>
+    </section>
+
+    <section class="telemetry-block" aria-labelledby="telemetryTitle">
+      <h3 id="telemetryTitle" class="telemetry-block-heading"><span>航行數據</span><span>LIVE SIM</span></h3>
+      <div class="stats">
+        <div class="stat"><span>速度</span><b id="speed">0</b><span class="unit">模擬單位</span></div>
+        <div class="stat resource-stat"><span>剩餘燃料</span><b id="fuel">100%</b><progress id="fuelMeter" class="resource-meter" max="100" value="100"></progress></div>
+        <div class="stat"><span>已耗燃料</span><b id="fuelUsed">0%</b></div>
+        <div class="stat resource-stat"><span>電力</span><b id="power">100%</b><progress id="powerMeter" class="resource-meter power-meter" max="100" value="100"></progress></div>
+        <div class="stat"><span>任務時間</span><b id="missionTime">0 年</b></div>
+        <div class="stat"><span>最近行星</span><b id="nearest">地球</b></div>
+        <div class="stat"><span>最近距離</span><b id="closest">—</b></div>
+        <div class="stat"><span>日心能量</span><b id="energy">—</b></div>
+        <div class="stat"><span>推進流量</span><b id="burnRate">0%/年</b></div>
+        <div class="stat"><span>成功助推</span><b id="boosts">0 次</b></div>
+      </div>
+    </section>
+    <p class="data-notice">所有數值均為本地教育模擬資料，並非真實 NASA 遙測。</p>
+  </aside>
+
+  <section class="flight-log" aria-label="即時飛行紀錄">
+    <div class="log-header"><h2>即時飛行紀錄 / FLIGHT LOG</h2><span>本地模擬事件</span></div>
+    <ol id="flightLog" class="flight-log-list" aria-live="polite"></ol>
+  </section>
 </main>
 
-<footer>
+<details class="learning-content">
+  <summary>引力助推原理與延伸閱讀</summary>
   <div class="card">
     <h2>為什麼可以在行星之間「遊走」？</h2>
     <p>
@@ -383,7 +590,7 @@ footer p{line-height:1.8;color:#d8e8f7}
       </table>
     </section>
   </div>
-</footer>
+</details>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -391,20 +598,22 @@ const canvas=document.getElementById('space');
 const $=id=>document.getElementById(id);
 const ui={
  hud:$('hud'),left:$('left'),right:$('right'),thrust:$('thrust'),pause:$('pause'),
- timeScale:$('timeScale'),timeVal:$('timeVal'),zoom:$('zoom'),zoomVal:$('zoomVal'),
+ timeScale:$('timeScale'),timeVal:$('timeVal'),thrustScale:$('thrustScale'),thrustVal:$('thrustVal'),zoom:$('zoom'),zoomVal:$('zoomVal'),
  assist:$('assist'),speed:$('speed'),fuel:$('fuel'),nearest:$('nearest'),
  fuelUsed:$('fuelUsed'),burnRate:$('burnRate'),missionTime:$('missionTime'),
  targetName:$('targetName'),missionPhase:$('missionPhase'),checklist:$('checklist'),
  closest:$('closest'),energy:$('energy'),boosts:$('boosts'),eventBanner:$('eventBanner'),
- reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode')
+ reset:$('reset'),skip:$('skip'),cameraMode:$('cameraMode'),resetView:$('resetView'),engineToggle:$('engineToggle'),
+ power:$('power'),powerMeter:$('powerMeter'),fuelMeter:$('fuelMeter'),runStatus:$('runStatus'),flightLog:$('flightLog')
 };
 
 let W=0,H=0,dpr=1,last=0,running=true,keys={},camera={x:0,y:0,zoom:1,pitch:.48,yaw:-.08};
 let ship,planets=[],trail=[],stars=[],missionIndex=0,missionTime=0,finished=false;
+let power=100,engineEngaged=false,fuelLowLogged=false,fuelEmptyLogged=false,powerLowLogged=false,powerEmptyLogged=false;
 const route=['木星','土星','天王星','海王星','冥王星'];
 let firstPerson=false,firstPersonYaw=0,firstPersonPitch=0;
 let demo={thrusting:false,burnRate:0,phase:'巡航'};
-let lastTargetName='',targetEntered=false,boostMessageTimer=0;
+let targetEntered=false,lastTargetAssistDebug=0,lastTargetAssistDebugTarget='';
 
 let renderer3d,scene3d,camera3d,textureLoader,ship3d,trail3d,trailDirty=true;
 let fallbackCanvas=null,ctx=null;
@@ -558,6 +767,7 @@ function updateTrail3D(){
 
 function setup2DRenderer(){
   if(fallbackCanvas)return;
+  $('cameraHint').textContent='2D 後備畫面 · 拖曳平移 · 滾輪縮放';
   fallbackCanvas=document.createElement('canvas');
   fallbackCanvas.id='spaceFallback';
   fallbackCanvas.setAttribute('aria-hidden','true');
@@ -581,13 +791,18 @@ function init(){
     angle:Math.atan2(earth.vy,earth.vx),
     fuel:100,fuelUsed:0,r:4,dead:false,closestApproach:Infinity,closestPlanet:'地球',boosts:0,lastBoost:0,clearedPlanet:'',clearanceGrace:0
   };
+  power=100;engineEngaged=false;fuelLowLogged=false;fuelEmptyLogged=false;powerLowLogged=false;powerEmptyLogged=false;
+  ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';
+  ui.engineToggle.disabled=ui.assist.value==='demo';
+  ui.flightLog.replaceChildren();
   camera.x=ship.x;camera.y=ship.y;camera.zoom=Number(ui.zoom.value);
   view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;view3d.yaw=-.52;view3d.pitch=.62;
   demo={thrusting:false,burnRate:0,phase:'巡航'};
-  trail=[];trailDirty=true;missionIndex=0;missionTime=0;finished=false;targetEntered=false;lastTargetName='';boostMessageTimer=0;
+  trail=[];trailDirty=true;missionIndex=0;missionTime=0;finished=false;targetEntered=false;lastTargetAssistDebug=0;lastTargetAssistDebugTarget='';
   ship.closestApproach=Infinity;ship.closestPlanet='地球';ship.boosts=0;ship.lastBoost=0;ship.clearedPlanet='';ship.clearanceGrace=0;
   running=true;syncPauseLabel();
   renderTarget();renderChecklist();
+  addLog('任務已啟動，所有讀值皆為教育模擬資料。','success');
 }
 
 function updatePlanets(dt){
@@ -618,7 +833,21 @@ function showEvent(message){
   ui.eventBanner.textContent=message;ui.eventBanner.classList.add('show');
   clearTimeout(showEvent.timer);showEvent.timer=setTimeout(()=>ui.eventBanner.classList.remove('show'),3600);
 }
-function syncPauseLabel(){ui.pause.textContent=running?'暫停':'繼續';}
+function addLog(message,type='control'){
+  if(!ui.flightLog)return;
+  const item=document.createElement('li');
+  item.className=`log-entry ${type}`;
+  const stamp=document.createElement('time');
+  stamp.textContent=`${missionTime.toFixed(1)} 年`;
+  const text=document.createElement('span');text.textContent=message;
+  item.append(stamp,text);ui.flightLog.append(item);
+  while(ui.flightLog.children.length>40)ui.flightLog.firstElementChild.remove();
+  ui.flightLog.scrollTop=ui.flightLog.scrollHeight;
+}
+function syncPauseLabel(){
+  ui.pause.textContent=running?'暫停':'繼續';
+  ui.runStatus.textContent=ship?.dead?'任務中止':finished?'任務完成':running?'模擬執行中':'模擬已暫停';
+}
 function solarEnergy(){
   const r=Math.hypot(ship.x,ship.y)||1;
   return .5*(ship.vx*ship.vx+ship.vy*ship.vy)-24000/r;
@@ -636,6 +865,38 @@ function steerToward(angle,dt){
   const diff=wrapAngle(angle-ship.angle);
   ship.angle += clamp(diff*2.7,-1,1)*1.9*dt;
   return Math.abs(diff);
+}
+
+function predictTargetPoint(shipState,target){
+  const current={x:target.x,y:target.y,leadTime:0};
+  const values=[shipState.x,shipState.y,shipState.vx,shipState.vy,target.x,target.y,target.vx,target.vy];
+  if(!values.every(Number.isFinite))return current;
+
+  const dx=target.x-shipState.x,dy=target.y-shipState.y;
+  const relativeVx=target.vx-shipState.vx,relativeVy=target.vy-shipState.vy;
+  const relativeSpeedSq=relativeVx*relativeVx+relativeVy*relativeVy;
+  if(!Number.isFinite(relativeSpeedSq)||relativeSpeedSq<1e-6)return current;
+
+  // Closest-approach time uses relative velocity in the simulation's own time units.
+  const estimate=-(dx*relativeVx+dy*relativeVy)/relativeSpeedSq;
+  if(!Number.isFinite(estimate)||estimate<=0)return current;
+  const leadTime=clamp(estimate,0,8);
+  const point={x:target.x+target.vx*leadTime,y:target.y+target.vy*leadTime,leadTime};
+  return Number.isFinite(point.x)&&Number.isFinite(point.y)?point:current;
+}
+
+function logTargetAssistDebug(target,aimPoint,targetAngle){
+  const now=performance.now();
+  if(target.name===lastTargetAssistDebugTarget&&now-lastTargetAssistDebug<1000)return;
+  lastTargetAssistDebug=now;
+  lastTargetAssistDebugTarget=target.name;
+  console.debug('[target-assist]',{
+    missionIndex,currentTarget:currentTargetName(),hudTarget:ui.targetName.textContent,target:target.name,
+    ship:{position:{x:ship.x,y:ship.y},velocity:{x:ship.vx,y:ship.vy},velocityDirection:Math.atan2(ship.vy,ship.vx)},
+    targetState:{position:{x:target.x,y:target.y},velocity:{x:target.vx,y:target.vy}},
+    leadTimeSimulationUnits:aimPoint.leadTime,predictedPosition:{x:aimPoint.x,y:aimPoint.y},
+    shipHeading:ship.angle,targetHeading:targetAngle,angleDifference:wrapAngle(targetAngle-ship.angle)
+  });
 }
 
 function useThruster(dt,power=1){
@@ -666,7 +927,7 @@ function demoGuidedBurn(dt,desiredVx,desiredVy,power){
   return true;
 }
 
-function demoAutopilot(dt,target){
+function demoAutopilot(dt,target,powerScale=1){
   if(!target){demo.thrusting=false;demo.phase='任務完成';return;}
 
   const dx=target.x-ship.x,dy=target.y-ship.y;
@@ -675,7 +936,7 @@ function demoAutopilot(dt,target){
   const tx=target.vx/targetSpeed,ty=target.vy/targetSpeed;
   const cross=dx*target.vy-dy*target.vx;
   const side=cross>=0?1:-1;
-  // 展示模式刻意保留較大的飛掠半徑，讓自動路線不會切入行星本體。
+  // 自動模式保留較大的飛掠半徑，避免導航路線切入行星本體。
   const flyby=Math.max(target.size+60,76);
   const lead=clamp(dist*.12,18,110);
   const aimX=target.x-tx*lead-ty*side*flyby;
@@ -687,7 +948,7 @@ function demoAutopilot(dt,target){
   const desiredSpeed=clamp(dist*.18,36,86);
   const desiredVx=aimDx/aimDist*desiredSpeed+target.vx*.65;
   const desiredVy=aimDy/aimDist*desiredSpeed+target.vy*.65;
-  const guidePower=dist<220?.78:.58;
+  const guidePower=(dist<220 ? .78 : .58)*powerScale;
   demo.thrusting=angleError<1.2 && demoGuidedBurn(dt,desiredVx,desiredVy,guidePower);
   demo.phase=dist<120?'掠飛修正':(demo.thrusting?'自動推進':'重力滑行');
 }
@@ -699,23 +960,25 @@ function updateShip(dt){
   let turning=0,thrusting=false;
   if(keys.ArrowLeft||keys.a||keys.A)turning-=1;
   if(keys.ArrowRight||keys.d||keys.D)turning+=1;
-  if(keys.ArrowUp||keys.w||keys.W)thrusting=true;
+  if(keys.ArrowUp||keys.w||keys.W||engineEngaged)thrusting=true;
 
   if(ui.assist.value==='demo'){
     demo.burnRate=0;
     demoAutopilot(dt,target);
     thrusting=demo.thrusting;
-  }else if(ui.assist.value==='target' && target){
-    const desired=Math.atan2(target.y-ship.y,target.x-ship.x);
-    turning=clamp(wrapAngle(desired-ship.angle)*2.7,-1,1);
-    ship.angle += turning*1.9*dt;
+  }else if(ui.assist.value==='target'&&target){
+    const aimPoint=predictTargetPoint(ship,target);
+    const desired=Math.atan2(aimPoint.y-ship.y,aimPoint.x-ship.x);
+    steerToward(desired,dt);
+    logTargetAssistDebug(target,aimPoint,desired);
   }else{
     ship.angle += turning*1.9*dt;
   }
 
-  if(ui.assist.value!=='demo'){
+  if(ui.assist.value==='none'||ui.assist.value==='target'){
     demo.burnRate=0;
-    if(thrusting)useThruster(dt,1);
+    // Target assistance never sets thrusting; here it can only be true from player input.
+    if(thrusting)useThruster(dt, Number(ui.thrustScale.value));
   }
 
   // 使用固定的視覺化重力尺度；step() 會在高倍率時切成多個小步驟。
@@ -738,6 +1001,7 @@ function updateShip(dt){
       ship.dead=true;running=false;syncPauseLabel();
       ui.hud.innerHTML=`<b style="color:#ff8f98">任務失敗：撞上${p.name}</b><br>請從行星外圍掠過，保留安全距離。`;
       showEvent(`撞上${p.name}，任務中止`);
+      addLog(`任務中止：太空船撞上${p.name}。`,'error');
       return;
     }
   }
@@ -774,12 +1038,14 @@ function updateShip(dt){
       // 成功助推代表安全完成一次飛掠；速度變慢也可能是有意的減速助推。
       ship.boosts+=1;
       showEvent(`${tgt.name}飛掠成功 · 速度變化 ${delta>=0?'+':''}${delta.toFixed(1)} · 重力助推 ${ship.boosts} 次`);
+      addLog(`${tgt.name}飛掠成功，速度變化 ${delta>=0?'+':''}${delta.toFixed(1)}。`,'success');
       missionIndex+=1;targetEntered=false;ship.closestApproach=Infinity;ship.approachSpeed=0;ship.approachEnergy=0;ship.clearedPlanet=tgt.name;ship.clearanceGrace=2.2;
       renderTarget();renderChecklist();
       if(missionIndex>=route.length){
         finished=true;running=false;syncPauseLabel();
         ui.hud.innerHTML='<b style="color:#72f1b8">任務完成！</b><br>你完成了木星至冥王星的大巡航，主要推進來自行星重力助推。';
         showEvent('大巡航完成 · 航海家號抵達冥王星');
+        addLog('大巡航完成，航海家號抵達冥王星。','success');
       }
     }
   }
@@ -901,7 +1167,7 @@ function drawShip(){
   ctx.beginPath();ctx.moveTo(-2,-2);ctx.lineTo(-14,-10);ctx.lineTo(-17,-7);ctx.lineTo(-4,1);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(-2,2);ctx.lineTo(-14,10);ctx.lineTo(-17,7);ctx.lineTo(-4,-1);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#63dcff';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(-12,-8);ctx.moveTo(-2,0);ctx.lineTo(-12,8);ctx.stroke();
-  if(((keys.ArrowUp||keys.w||keys.W)||demo.thrusting)&&ship.fuel>0){
+  if(((keys.ArrowUp||keys.w||keys.W||engineEngaged)||demo.thrusting)&&ship.fuel>0){
     const flame=ctx.createLinearGradient(-4,0,-24,0);flame.addColorStop(0,'#fff3a1');flame.addColorStop(.5,'#ff9a5c');flame.addColorStop(1,'rgba(255,74,76,0)');
     ctx.fillStyle=flame;ctx.beginPath();ctx.moveTo(-5,-3);ctx.lineTo(-25,0);ctx.lineTo(-5,3);ctx.closePath();ctx.fill();
   }
@@ -923,7 +1189,7 @@ function updateTelemetry(){
   const tgt=targetPlanet();
   const targetText=tgt?`${tgt.name}（距離 ${Math.hypot(tgt.x-ship.x,tgt.y-ship.y).toFixed(0)}）`:'任務完成';
   if(!ship.dead&&!finished){
-    const modeText=ui.assist.value==='demo'?`<br>展示模式：${demo.phase}，仍須保持安全飛掠距離。`:'';
+    const modeText=ui.assist.value==='demo'?`<br>展示模式：${demo.phase}，仍須保持安全飛掠距離。`:ui.assist.value==='target'?'<br>自動航向輔助已開啟：系統已為您對準目標，請按住推進器 (W) 前進。':'';
     const cameraText=firstPerson?'<br>第一視角：鏡頭位於太空梭上，沿船頭方向觀察前方。':'';
     ui.hud.innerHTML=`<b>下一航點：${targetText}</b><br>綠色箭頭是目標方向；靠近後從側面掠過，讓重力替你轉彎。${modeText}${cameraText}`;
   }
@@ -935,6 +1201,15 @@ function updateTelemetry(){
   ui.energy.textContent=solarEnergy().toFixed(0);
   ui.boosts.textContent=`${ship.boosts} 次`;
   ui.missionTime.textContent=missionTime.toFixed(1)+' 年';
+  ui.power.textContent=power.toFixed(0)+'%';
+  ui.powerMeter.value=power;ui.fuelMeter.value=ship.fuel;
+  if(ship.fuel<=20&&!fuelLowLogged){fuelLowLogged=true;addLog('燃料低於 20%，請留意推進操作。','warning');}
+  if(ship.fuel<=0&&!fuelEmptyLogged){
+    fuelEmptyLogged=true;addLog('燃料已耗盡，推進器無法提供推力。','error');
+    if(engineEngaged){engineEngaged=false;ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';}
+  }
+  if(power<=20&&!powerLowLogged){powerLowLogged=true;addLog('模擬電力低於 20%。','warning');}
+  if(power<=0&&!powerEmptyLogged){powerEmptyLogged=true;addLog('模擬電力已耗盡；此教育數值不會改變飛行物理。','error');}
 }
 
 function drawFirstPersonFallback(){
@@ -1000,7 +1275,7 @@ function draw(){
   sun3d.rotation.y+=.0007;
   ship3d.position.set(ship.x,0,ship.y);ship3d.rotation.y=-ship.angle;
   ship3d.visible=!firstPerson;
-  const engineOn=(keys.ArrowUp||keys.w||keys.W||demo.thrusting)&&ship.fuel>0&&!ship.dead;
+  const engineOn=(keys.ArrowUp||keys.w||keys.W||engineEngaged||demo.thrusting)&&ship.fuel>0&&!ship.dead;
   if(flameOuter3d&&flameInner3d&&flameLight3d){
     flameOuter3d.visible=engineOn;flameInner3d.visible=engineOn;flameLight3d.intensity=engineOn?1.6:0;
     if(engineOn){
@@ -1054,15 +1329,19 @@ function step(t){
       updateShip(dt);
       if(ship.dead||finished)break;
     }
-    camera.x+=(ship.x-camera.x)*Math.min(1,simDt*3);
-    camera.y+=(ship.y-camera.y)*Math.min(1,simDt*3);
+    const thrustActive=Boolean(keys.ArrowUp||keys.w||keys.W||engineEngaged||demo.thrusting);
+    power=Math.max(0,power-simDt*(.002+(thrustActive ? .012 : 0)));
+    if(!view3d.manualTarget){
+      camera.x+=(ship.x-camera.x)*Math.min(1,simDt*3);
+      camera.y+=(ship.y-camera.y)*Math.min(1,simDt*3);
+    }
     camera.zoom+=(Number(ui.zoom.value)-camera.zoom)*Math.min(1,simDt*5);
   }
   draw();requestAnimationFrame(step);
 }
 
 function holdButton(el,key){
-  const on=e=>{e.preventDefault();keys[key]=true};
+  const on=e=>{e.preventDefault();if(!keys[key])addLog(`${key==='ArrowUp'?'推進':key==='ArrowLeft'?'左轉':'右轉'}控制已輸入。`);keys[key]=true};
   const off=e=>{e.preventDefault();keys[key]=false};
   el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);
   el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
@@ -1071,26 +1350,53 @@ holdButton(ui.left,'ArrowLeft');holdButton(ui.right,'ArrowRight');holdButton(ui.
 
 addEventListener('keydown',e=>{
   if(['ArrowLeft','ArrowRight','ArrowUp',' ','w','a','d','W','A','D'].includes(e.key))e.preventDefault();
-  if(e.key===' '){running=!running;syncPauseLabel();}
-  else keys[e.key]=true;
+  if(e.key===' '){if(!e.repeat){running=!running;syncPauseLabel();addLog(running?'模擬繼續執行。':'模擬已暫停。');}}
+  else{
+    if(!keys[e.key]&&['ArrowLeft','ArrowRight','ArrowUp','a','A','d','D','w','W'].includes(e.key))addLog(`${e.key==='ArrowUp'||e.key==='w'||e.key==='W'?'推進':e.key==='ArrowLeft'||e.key==='a'||e.key==='A'?'左轉':'右轉'}控制已輸入。`);
+    keys[e.key]=true;
+  }
 });
 addEventListener('keyup',e=>keys[e.key]=false);
 
-ui.pause.onclick=()=>{if(!ship.dead&&!finished){running=!running;syncPauseLabel();}};
+ui.pause.onclick=()=>{if(!ship.dead&&!finished){running=!running;syncPauseLabel();addLog(running?'模擬繼續執行。':'模擬已暫停。');}};
+ui.engineToggle.onclick=()=>{
+  if(!engineEngaged&&ship.fuel<=0){addLog('燃料已耗盡，無法啟動推進器。','warning');return;}
+  engineEngaged=!engineEngaged;
+  ui.engineToggle.setAttribute('aria-pressed',String(engineEngaged));
+  ui.engineToggle.textContent=engineEngaged?'推進器停止':'推進器啟動';
+  addLog(engineEngaged?'推進器已啟動。':'推進器已停止。');
+};
 ui.timeScale.oninput=()=>ui.timeVal.textContent=Number(ui.timeScale.value).toFixed(1)+'×';
+ui.thrustScale.oninput=()=>ui.thrustVal.textContent=Number(ui.thrustScale.value).toFixed(1)+'×';
 ui.zoom.oninput=()=>ui.zoomVal.textContent=Number(ui.zoom.value).toFixed(2)+'×';
 ui.assist.onchange=()=>{
+  if(ui.assist.value==='demo'){
+    if(engineEngaged){engineEngaged=false;ui.engineToggle.setAttribute('aria-pressed','false');ui.engineToggle.textContent='推進器啟動';addLog('切換輔助模式，已關閉手動推進器。');}
+    ui.engineToggle.disabled=true;
+  }else{
+    ui.engineToggle.disabled=false;
+  }
   if(ui.assist.value==='demo'){
     running=true;
     syncPauseLabel();
     ui.timeScale.value='5';ui.timeScale.oninput();
     ui.zoom.value='0.85';ui.zoom.oninput();
   }
+  addLog(`飛行輔助已切換：${ui.assist.options[ui.assist.selectedIndex].text}。`);
 };
-ui.reset.onclick=init;
+ui.reset.onclick=()=>{init();addLog('任務已重新開始。','success');};
 ui.cameraMode.onclick=()=>{
   firstPerson=!firstPerson;firstPersonYaw=0;firstPersonPitch=0;
   ui.cameraMode.textContent=firstPerson?'切換為第三視角':'切換為第一視角';
+  addLog(firstPerson?'已切換至第一視角。':'已切換至第三視角。');
+};
+ui.resetView.onclick=()=>{
+  firstPerson=false;firstPersonYaw=0;firstPersonPitch=0;
+  view3d.yaw=-.52;view3d.pitch=.62;
+  view3d.targetX=ship.x;view3d.targetZ=ship.y;view3d.manualTarget=false;
+  camera.x=ship.x;camera.y=ship.y;
+  camera.zoom=1;ui.zoom.value='1';ui.zoom.oninput();
+  ui.cameraMode.textContent='切換為第一視角';
 };
 ui.skip.onclick=()=>{
   const tgt=targetPlanet();if(!tgt||ship.dead||finished)return;
@@ -1101,6 +1407,7 @@ ui.skip.onclick=()=>{
   ship.angle=Math.atan2(ship.vy,ship.vx);ship.closestApproach=Infinity;ship.approachSpeed=0;targetEntered=false;ship.clearedPlanet='';ship.clearanceGrace=0;
   trail=[];trailDirty=true;camera.x=ship.x;camera.y=ship.y;
   showEvent(`已定位至${tgt.name}外圍，練習安全飛掠`);
+  addLog(`已定位至${tgt.name}外圍，開始練習安全飛掠。`);
 };
 function cursorOnOrbitalPlane(e){
   if(!camera3d||!raycaster3d)return null;
@@ -1137,6 +1444,7 @@ function pointerCenter(){
 
 canvas.addEventListener('pointerdown',e=>{
   if(e.button!==0)return;
+  view3d.manualTarget=true;
   if(e.pointerType==='touch'){
     activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
     canvas.setPointerCapture(e.pointerId);
@@ -1149,6 +1457,7 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
+  e.preventDefault();
   view3d.dragging=true;view3d.lastX=e.clientX;view3d.lastY=e.clientY;canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor='grabbing';
 });
@@ -1169,8 +1478,12 @@ canvas.addEventListener('pointermove',e=>{
   view3d.lastX=e.clientX;view3d.lastY=e.clientY;
   if(firstPerson){
     firstPersonYaw-=dx*.006;firstPersonPitch=clamp(firstPersonPitch+dy*.005,-1.45,1.45);
-  }else{
+  }else if(renderer3d&&camera3d){
     view3d.yaw-=dx*.006;view3d.pitch=clamp(view3d.pitch+dy*.005,-1.45,1.45);
+  }else{
+    const zoom=Math.max(.45,camera.zoom),pitch=Math.max(.3,camera.pitch),c=Math.cos(camera.yaw),s=Math.sin(camera.yaw);
+    const shiftedX=-dx/(zoom),shiftedY=-dy/(zoom*pitch);
+    camera.x+=shiftedX*c+shiftedY*s;camera.y-=shiftedX*s;camera.y+=shiftedY*c;
   }
 });
 canvas.addEventListener('pointerup',e=>{
@@ -1184,7 +1497,7 @@ canvas.addEventListener('pointerup',e=>{
     }
     return;
   }
-  view3d.dragging=false;canvas.releasePointerCapture(e.pointerId);canvas.style.cursor='grab';
+  view3d.dragging=false;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);canvas.style.cursor='grab';
 });
 canvas.addEventListener('pointercancel',e=>{
   if(e.pointerType==='touch')activePointers.delete(e.pointerId);
@@ -1193,10 +1506,8 @@ canvas.addEventListener('pointercancel',e=>{
 canvas.style.cursor='grab';
 
 function isMouseWheelEvent(e){
-  if(e.deltaX!==0)return false;
-  if(e.deltaMode===WheelEvent.DOM_DELTA_LINE)return true;
-  const wheelDelta=e.wheelDeltaY??e.wheelDelta;
-  return Number.isFinite(wheelDelta)&&Math.abs(wheelDelta)>=120&&Math.abs(wheelDelta)%120===0;
+  // 垂直滾輪（含不提供 wheelDelta 的瀏覽器）用於縮放；水平觸控板手勢保留為視角旋轉。
+  return e.deltaX===0;
 }
 
 canvas.addEventListener('wheel',e=>{
