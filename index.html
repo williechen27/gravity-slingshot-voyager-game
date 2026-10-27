@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>航海家號：太陽系引力彈弓任務｜3D game_3</title>
+<title>航海家號：太陽系引力彈弓任務｜3D game_3｜現實軌道比例版</title>
 <style>
 
 :root {
@@ -378,11 +378,11 @@ select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba
   <section class="stage" aria-label="3D 太空場景">
     <canvas id="space"></canvas>
     <div class="stage-tools">
-      <span id="cameraHint">拖曳旋轉 · 滾輪縮放</span>
+      <span id="cameraHint">左鍵旋轉 · 中鍵平移 · 滾輪縮放</span>
       <button id="resetView" type="button" aria-label="重設太空場景視角">重設視角</button>
     </div>
     <div class="event-banner" id="eventBanner" aria-live="polite"></div>
-    <div class="education-tag">教育模擬資料 · 非 NASA 即時遙測</div>
+    <div class="education-tag">軌道距離按 AU 比例 · 傾角為相對黃道面 · 教育模擬</div>
   </section>
 
   <aside class="panel telemetry-panel" aria-label="航行遙測面板">
@@ -413,7 +413,7 @@ select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba
         <div class="stat"><span>成功助推</span><b id="boosts">0 次</b></div>
       </div>
     </section>
-    <p class="data-notice">所有數值均為本地教育模擬資料，並非真實 NASA 遙測。</p>
+    <p class="data-notice">軌道半徑採用真實 AU 比例，傾角採用相對黃道面的近似值；行星大小與飛行物理仍為教育模擬，並非 NASA 即時遙測。</p>
   </aside>
 
   <section class="flight-log" aria-label="即時飛行紀錄">
@@ -619,7 +619,7 @@ let renderer3d,scene3d,camera3d,textureLoader,ship3d,trail3d,trailDirty=true;
 let fallbackCanvas=null,ctx=null;
 let sun3d,planetMeshes=new Map(),planetRings=new Map(),earthClouds;
 let flameOuter3d,flameInner3d,flameLight3d,raycaster3d;
-let view3d={yaw:-.52,pitch:.62,targetX:0,targetZ:0,manualTarget:false,dragging:false,lastX:0,lastY:0};
+let view3d={yaw:-.52,pitch:.62,targetX:0,targetZ:0,manualTarget:false,dragging:false,dragMode:'rotate',lastX:0,lastY:0};
 const textureBase='https://raw.githubusercontent.com/JiayuanZhu/solar-system-viz/main/textures/';
 const planetTextures={
   水星:'2k_mercury.jpg',金星:'2k_venus_surface.jpg',地球:'2k_earth_daymap.jpg',
@@ -645,17 +645,45 @@ function resize(){
 }
 addEventListener('resize',resize);resize();
 
+// 以天文單位（AU）建立軌道半長軸；1 AU 在場景中對應 60 個模擬單位。
+// inclinationDeg 是相對黃道面的軌道傾角，nodeDeg 是升交點黃經（J2000 近似值）。
+const AU_SCALE=60,DEG=Math.PI/180;
 const planetData=[
- {name:'水星',rOrbit:95,size:4,mass:.25,speed:1.55,color:'#b7aaa1',phase:.4},
- {name:'金星',rOrbit:130,size:7,mass:.55,speed:1.28,color:'#e6b96e',phase:2.1},
- {name:'地球',rOrbit:165,size:8,mass:.65,speed:1.12,color:'#53a8ff',phase:3.15},
- {name:'火星',rOrbit:215,size:6,mass:.42,speed:.91,color:'#d96f4f',phase:4.6},
- {name:'木星',rOrbit:310,size:18,mass:4.7,speed:.60,color:'#d9aa74',phase:.15},
- {name:'土星',rOrbit:405,size:15,mass:3.7,speed:.47,color:'#e8d18b',phase:1.28,ring:true},
- {name:'天王星',rOrbit:500,size:12,mass:2.1,speed:.36,color:'#8fe3e7',phase:2.55},
- {name:'海王星',rOrbit:585,size:12,mass:2.3,speed:.30,color:'#5275e8',phase:4.05},
- {name:'冥王星',rOrbit:665,size:5,mass:.22,speed:.24,color:'#c9b6a4',phase:5.45}
+ {name:'水星',orbitAU:.3871,rOrbit:AU_SCALE*.3871,inclinationDeg:7.005,nodeDeg:48.331,size:4,mass:.25,speed:1.55,color:'#b7aaa1',phase:.4},
+ {name:'金星',orbitAU:.7233,rOrbit:AU_SCALE*.7233,inclinationDeg:3.3947,nodeDeg:76.680,size:7,mass:.55,speed:1.28,color:'#e6b96e',phase:2.1},
+ {name:'地球',orbitAU:1,rOrbit:AU_SCALE,inclinationDeg:0,nodeDeg:0,size:8,mass:.65,speed:1.12,color:'#53a8ff',phase:3.15},
+ {name:'火星',orbitAU:1.5237,rOrbit:AU_SCALE*1.5237,inclinationDeg:1.8506,nodeDeg:49.558,size:6,mass:.42,speed:.91,color:'#d96f4f',phase:4.6},
+ {name:'木星',orbitAU:5.2028,rOrbit:AU_SCALE*5.2028,inclinationDeg:1.303,nodeDeg:100.556,size:18,mass:4.7,speed:.60,color:'#d9aa74',phase:.15},
+ {name:'土星',orbitAU:9.5388,rOrbit:AU_SCALE*9.5388,inclinationDeg:2.485,nodeDeg:113.715,size:15,mass:3.7,speed:.47,color:'#e8d18b',phase:1.28,ring:true},
+ {name:'天王星',orbitAU:19.1914,rOrbit:AU_SCALE*19.1914,inclinationDeg:.773,nodeDeg:74.2299,size:12,mass:2.1,speed:.36,color:'#8fe3e7',phase:2.55},
+ {name:'海王星',orbitAU:30.0611,rOrbit:AU_SCALE*30.0611,inclinationDeg:1.770,nodeDeg:131.7217,size:12,mass:2.3,speed:.30,color:'#5275e8',phase:4.05},
+ {name:'冥王星',orbitAU:39.482,rOrbit:AU_SCALE*39.482,inclinationDeg:17.16,nodeDeg:110.299,size:5,mass:.22,speed:.24,color:'#c9b6a4',phase:5.45}
 ];
+
+function orbitPosition3D(p,angle=p.angle){
+  const inclination=(p.inclinationDeg||0)*DEG;
+  const node=(p.nodeDeg||0)*DEG;
+  const ca=Math.cos(angle),sa=Math.sin(angle),ci=Math.cos(inclination),si=Math.sin(inclination);
+  const cn=Math.cos(node),sn=Math.sin(node);
+  return {
+    x:p.rOrbit*(cn*ca-sn*sa*ci),
+    y:p.rOrbit*(sa*si),
+    z:p.rOrbit*(sn*ca+cn*sa*ci)
+  };
+}
+
+function orbitVelocity3D(p,angle=p.angle){
+  const inclination=(p.inclinationDeg||0)*DEG;
+  const node=(p.nodeDeg||0)*DEG;
+  const ca=Math.cos(angle),sa=Math.sin(angle),ci=Math.cos(inclination),si=Math.sin(inclination);
+  const cn=Math.cos(node),sn=Math.sin(node);
+  const angularSpeed=p.speed*.055;
+  return {
+    x:p.rOrbit*(-cn*sa-sn*ca*ci)*angularSpeed,
+    y:p.rOrbit*(ca*si)*angularSpeed,
+    z:p.rOrbit*(-sn*sa+cn*ca*ci)*angularSpeed
+  };
+}
 
 function loadTexture(file){
   const texture=textureLoader.load(textureBase+file);
@@ -734,7 +762,7 @@ function setup3D(){
       ring.rotation.x=Math.PI/2;scene3d.add(ring);planetRings.set(p.name,ring);
     }
     const orbitPoints=[];
-    for(let i=0;i<=128;i++){const a=i/128*Math.PI*2;orbitPoints.push(new THREE.Vector3(Math.cos(a)*p.rOrbit,0,Math.sin(a)*p.rOrbit));}
+    for(let i=0;i<=128;i++){const a=i/128*Math.PI*2;const point=orbitPosition3D(p,a);orbitPoints.push(new THREE.Vector3(point.x,point.y,point.z));}
     const orbitGeometry=new THREE.BufferGeometry().setFromPoints(orbitPoints);
     scene3d.add(new THREE.Line(orbitGeometry,new THREE.LineBasicMaterial({color:0x39799b,transparent:true,opacity:.28})));
   }
@@ -785,10 +813,19 @@ function init(){
   planets=planetData.map(p=>({...p,angle:p.phase,x:0,y:0,vx:0,vy:0,visited:false}));
   updatePlanets(0);
   const earth=planets.find(p=>p.name==='地球');
+  const launchTarget=planets.find(p=>p.name==='木星')||earth;
+  const launchDx=launchTarget.x-earth.x,launchDy=launchTarget.y-earth.y;
+  const launchLength=Math.hypot(launchDx,launchDy)||1;
+  const launchUx=launchDx/launchLength,launchUy=launchDy/launchLength;
+  const launchDistance=24;
+  const launchX=earth.x+launchUx*launchDistance;
+  const launchY=earth.y+launchUy*launchDistance;
+  const launchVx=earth.vx+launchUx*35;
+  const launchVy=earth.vy+launchUy*35;
   ship={
-    x:earth.x+15,y:earth.y-4,
-    vx:earth.vx+35,vy:earth.vy-2,
-    angle:Math.atan2(earth.vy,earth.vx),
+    x:launchX,y:launchY,
+    vx:launchVx,vy:launchVy,
+    angle:Math.atan2(launchVy,launchVx),
     fuel:100,fuelUsed:0,r:4,dead:false,closestApproach:Infinity,closestPlanet:'地球',boosts:0,lastBoost:0,clearedPlanet:'',clearanceGrace:0
   };
   power=100;engineEngaged=false;fuelLowLogged=false;fuelEmptyLogged=false;powerLowLogged=false;powerEmptyLogged=false;
@@ -808,10 +845,13 @@ function init(){
 function updatePlanets(dt){
   for(const p of planets){
     p.angle += p.speed*dt*.055;
-    p.x=Math.cos(p.angle)*p.rOrbit;
-    p.y=Math.sin(p.angle)*p.rOrbit;
-    p.vx=-Math.sin(p.angle)*p.rOrbit*p.speed*.055;
-    p.vy= Math.cos(p.angle)*p.rOrbit*p.speed*.055;
+    const position=orbitPosition3D(p);
+    const velocity=orbitVelocity3D(p);
+    // 物理引擎仍使用 X-Z 投影平面；3D 顯示則保留完整軌道傾角。
+    p.x=position.x;
+    p.y=position.z;
+    p.vx=velocity.x;
+    p.vy=velocity.z;
   }
 }
 
@@ -927,6 +967,11 @@ function demoGuidedBurn(dt,desiredVx,desiredVy,power){
   return true;
 }
 
+function demoSafeFlybyRadius(target){
+  // 自動展示模式要在離散時間步驟與行星重力下保留足夠的轉向空間。
+  return Math.max(target.size+(ship?.r||4)+48,90);
+}
+
 function demoAutopilot(dt,target,powerScale=1){
   if(!target){demo.thrusting=false;demo.phase='任務完成';return;}
 
@@ -937,7 +982,7 @@ function demoAutopilot(dt,target,powerScale=1){
   const cross=dx*target.vy-dy*target.vx;
   const side=cross>=0?1:-1;
   // 自動模式保留較大的飛掠半徑，避免導航路線切入行星本體。
-  const flyby=Math.max(target.size+60,76);
+  const flyby=demoSafeFlybyRadius(target);
   const lead=clamp(dist*.12,18,110);
   const aimX=target.x-tx*lead-ty*side*flyby;
   const aimY=target.y-ty*lead+tx*side*flyby;
@@ -946,11 +991,48 @@ function demoAutopilot(dt,target,powerScale=1){
   const aimDx=aimX-ship.x,aimDy=aimY-ship.y;
   const aimDist=Math.max(1,Math.hypot(aimDx,aimDy));
   const desiredSpeed=clamp(dist*.18,36,86);
-  const desiredVx=aimDx/aimDist*desiredSpeed+target.vx*.65;
-  const desiredVy=aimDy/aimDist*desiredSpeed+target.vy*.65;
-  const guidePower=(dist<220 ? .78 : .58)*powerScale;
-  demo.thrusting=angleError<1.2 && demoGuidedBurn(dt,desiredVx,desiredVy,guidePower);
-  demo.phase=dist<120?'掠飛修正':(demo.thrusting?'自動推進':'重力滑行');
+  let desiredVx=aimDx/aimDist*desiredSpeed+target.vx*.65;
+  let desiredVy=aimDy/aimDist*desiredSpeed+target.vy*.65;
+  let obstacleThreat=false;
+  // 接近飛掠點時優先沿切線繞過行星；若距離過近則強制施加離心逃逸速度，
+  // 避免單一離散步驟把飛船帶進碰撞半徑。
+  if(dist<flyby*1.6){
+    const invDist=1/Math.max(dist,1);
+    const awayX=dx*invDist,awayY=dy*invDist;
+    const tangentX=-awayY*side,tangentY=awayX*side;
+    const escapeSpeed=Math.max(70,targetSpeed+26);
+    const safeVx=target.vx*.7+awayX*escapeSpeed+tangentX*targetSpeed*.8;
+    const safeVy=target.vy*.7+awayY*escapeSpeed+tangentY*targetSpeed*.8;
+    const escapeBlend=clamp((flyby*1.6-dist)/(flyby*.7),0,1);
+    desiredVx=desiredVx*(1-escapeBlend)+safeVx*escapeBlend;
+    desiredVy=desiredVy*(1-escapeBlend)+safeVy*escapeBlend;
+  }
+  // 前往下一個航點時，其他行星也必須視為障礙物；否則導航可能直穿天王星、海王星等行星。
+  for(const obstacle of planets){
+    if(obstacle===target)continue;
+    const ox=ship.x-obstacle.x,oy=ship.y-obstacle.y;
+    const obstacleDistance=Math.hypot(ox,oy);
+    const obstacleSafeRadius=Math.max(obstacle.size+(ship.r||4)+30,42);
+    const obstacleTrigger=obstacleSafeRadius*2.2;
+    if(obstacleDistance>=obstacleTrigger)continue;
+    obstacleThreat=true;
+    const invObstacleDistance=1/Math.max(obstacleDistance,1);
+    const awayX=ox*invObstacleDistance,awayY=oy*invObstacleDistance;
+    const obstacleSpeed=Math.hypot(obstacle.vx,obstacle.vy)||1;
+    const obstacleTx=obstacle.vx/obstacleSpeed,obstacleTy=obstacle.vy/obstacleSpeed;
+    const obstacleSide=(ox*obstacle.vy-oy*obstacle.vx)>=0?1:-1;
+    const tangentX=-awayY*obstacleSide,tangentY=awayX*obstacleSide;
+    const escapeSpeed=Math.max(64,obstacleSpeed+34);
+    const safeVx=obstacle.vx*.7+awayX*escapeSpeed+tangentX*obstacleSpeed*.75;
+    const safeVy=obstacle.vy*.7+awayY*escapeSpeed+tangentY*obstacleSpeed*.75;
+    const avoidanceBlend=clamp((obstacleTrigger-obstacleDistance)/(obstacleSafeRadius*1.2),0,1);
+    desiredVx=desiredVx*(1-avoidanceBlend)+safeVx*avoidanceBlend;
+    desiredVy=desiredVy*(1-avoidanceBlend)+safeVy*avoidanceBlend;
+  }
+  const guidePower=(dist<flyby*2.1||obstacleThreat ? .88 : .58)*powerScale;
+  const burnAllowed=angleError<1.2||dist<flyby*1.6||obstacleThreat;
+  demo.thrusting=burnAllowed&&demoGuidedBurn(dt,desiredVx,desiredVy,guidePower);
+  demo.phase=obstacleThreat?'行星避讓':dist<120?'掠飛修正':(demo.thrusting?'自動推進':'重力滑行');
 }
 
 function updateShip(dt){
@@ -1019,7 +1101,7 @@ function updateShip(dt){
   const tgt=targetPlanet();
   if(tgt){
     const d=Math.hypot(tgt.x-ship.x,tgt.y-ship.y);
-    const demoFlybyRadius=Math.max(tgt.size+60,76);
+    const demoFlybyRadius=demoSafeFlybyRadius(tgt);
     const arrivalRadius=ui.assist.value==='demo'?demoFlybyRadius:Math.max(30,tgt.size+20);
     if(d<ship.closestApproach){
       ship.closestApproach=d;ship.closestPlanet=tgt.name;
@@ -1082,11 +1164,12 @@ function drawBackground(){
 
 function drawOrbit(p){
   const c=worldToScreen(0,0);
-  ctx.save();ctx.translate(c.x,c.y);ctx.rotate(camera.yaw*.45);
-  // 以兩層橢圓與高光弧線表現傾斜的軌道平面。
-  ctx.scale(1,.68);ctx.strokeStyle='rgba(130,180,230,.18)';ctx.lineWidth=1;
+  const inclination=Math.cos((p.inclinationDeg||0)*DEG);
+  ctx.save();ctx.translate(c.x,c.y);ctx.rotate(camera.yaw*.45+(p.nodeDeg||0)*DEG);
+  // 2D 後備畫面用投影橢圓近似真實軌道傾角；3D 畫面使用完整軌道平面。
+  ctx.scale(1,inclination*.92);ctx.strokeStyle='rgba(130,180,230,.18)';ctx.lineWidth=1;
   ctx.beginPath();ctx.arc(0,0,p.rOrbit*camera.zoom,0,Math.PI*2);ctx.stroke();
-  ctx.scale(1,.62);ctx.strokeStyle='rgba(99,220,255,.08)';ctx.lineWidth=2;
+  ctx.scale(1,.94);ctx.strokeStyle='rgba(99,220,255,.08)';ctx.lineWidth=2;
   ctx.beginPath();ctx.arc(0,0,p.rOrbit*camera.zoom,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
@@ -1268,9 +1351,10 @@ function draw(){
   }
   for(const p of planets){
     const mesh=planetMeshes.get(p.name);if(!mesh)continue;
-    mesh.position.set(p.x,0,p.y);mesh.rotation.y+=.002+p.speed*.00035;
-    const ring=planetRings.get(p.name);if(ring){ring.position.set(p.x,0,p.y);ring.rotation.z+=.0008;}
-    if(p.name==='地球'&&earthClouds){earthClouds.position.set(p.x,0,p.y);earthClouds.rotation.y+=.0025;}
+    const orbitalPosition=orbitPosition3D(p);
+    mesh.position.set(orbitalPosition.x,orbitalPosition.y,orbitalPosition.z);mesh.rotation.y+=.002+p.speed*.00035;
+    const ring=planetRings.get(p.name);if(ring){ring.position.set(orbitalPosition.x,orbitalPosition.y,orbitalPosition.z);ring.rotation.z+=.0008;}
+    if(p.name==='地球'&&earthClouds){earthClouds.position.set(orbitalPosition.x,orbitalPosition.y,orbitalPosition.z);earthClouds.rotation.y+=.0025;}
   }
   sun3d.rotation.y+=.0007;
   ship3d.position.set(ship.x,0,ship.y);ship3d.rotation.y=-ship.angle;
@@ -1303,7 +1387,7 @@ function draw(){
       view3d.targetX+=(ship.x-view3d.targetX)*.08;view3d.targetZ+=(ship.y-view3d.targetZ)*.08;
     }
     const target3d=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
-    const distance=1180/Math.max(.45,camera.zoom);
+    const distance=4200/Math.max(.45,camera.zoom);
     const horizontalDistance=distance*Math.cos(view3d.pitch);
     const desiredCamera=target3d.clone().add(new THREE.Vector3(
       Math.sin(view3d.yaw)*horizontalDistance,
@@ -1420,12 +1504,12 @@ function cursorOnOrbitalPlane(e){
 
 function setZoomAt(clientX,clientY,z){
   const before=cursorOnOrbitalPlane({clientX,clientY});
-  const oldZoom=Number(ui.zoom.value),oldDistance=1180/oldZoom;
+  const oldZoom=Number(ui.zoom.value),oldDistance=4200/oldZoom;
   z=Math.max(.45,Math.min(2.2,z));
   ui.zoom.value=z;ui.zoom.oninput();
   if(before){
     const oldTarget=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
-    const focus=1-(1180/z)/oldDistance;
+    const focus=1-(4200/z)/oldDistance;
     const nextTarget=oldTarget.lerp(before,clamp(focus,0,.42));
     view3d.targetX=nextTarget.x;view3d.targetZ=nextTarget.z;view3d.manualTarget=true;
   }
@@ -1443,9 +1527,9 @@ function pointerCenter(){
 }
 
 canvas.addEventListener('pointerdown',e=>{
-  if(e.button!==0)return;
-  view3d.manualTarget=true;
   if(e.pointerType==='touch'){
+    view3d.manualTarget=true;
+    view3d.dragMode='rotate';
     activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
     canvas.setPointerCapture(e.pointerId);
     if(activePointers.size===2){
@@ -1457,7 +1541,11 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
+  // CAD 常見操作：左鍵旋轉、中鍵平移；滾輪由 wheel 事件負責縮放。
+  if(e.button!==0&&e.button!==1)return;
   e.preventDefault();
+  view3d.manualTarget=true;
+  view3d.dragMode=e.button===1?'pan':'rotate';
   view3d.dragging=true;view3d.lastX=e.clientX;view3d.lastY=e.clientY;canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor='grabbing';
 });
@@ -1476,7 +1564,15 @@ canvas.addEventListener('pointermove',e=>{
   if(!view3d.dragging)return;
   const dx=e.clientX-view3d.lastX,dy=e.clientY-view3d.lastY;
   view3d.lastX=e.clientX;view3d.lastY=e.clientY;
-  if(firstPerson){
+  if(!firstPerson&&view3d.dragMode==='pan'&&renderer3d&&camera3d){
+    const distance=4200/Math.max(.45,camera.zoom);
+    const fov=(camera3d.fov||48)*DEG;
+    const panScale=2*distance*Math.tan(fov/2)/Math.max(1,H);
+    const right=new THREE.Vector3().setFromMatrixColumn(camera3d.matrixWorld,0);
+    const up=new THREE.Vector3().setFromMatrixColumn(camera3d.matrixWorld,1);
+    view3d.targetX+=(-dx*right.x+dy*up.x)*panScale;
+    view3d.targetZ+=(-dx*right.z+dy*up.z)*panScale;
+  }else if(firstPerson){
     firstPersonYaw-=dx*.006;firstPersonPitch=clamp(firstPersonPitch+dy*.005,-1.45,1.45);
   }else if(renderer3d&&camera3d){
     view3d.yaw-=dx*.006;view3d.pitch=clamp(view3d.pitch+dy*.005,-1.45,1.45);
@@ -1503,6 +1599,7 @@ canvas.addEventListener('pointercancel',e=>{
   if(e.pointerType==='touch')activePointers.delete(e.pointerId);
   view3d.dragging=false;canvas.style.cursor='grab';
 });
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.style.cursor='grab';
 
 function isMouseWheelEvent(e){
