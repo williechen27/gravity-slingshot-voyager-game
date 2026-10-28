@@ -351,7 +351,7 @@ select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba
         </div>
         <div class="setting-field">
           <label for="zoom"><span>鏡頭縮放</span><b id="zoomVal">1.0×</b></label>
-          <input id="zoom" type="range" min="0.45" max="2.2" step="0.05" value="1">
+          <input id="zoom" type="range" min="0.45" max="10.0" step="0.05" value="1">
         </div>
         <div class="setting-field">
           <label for="assist"><span>飛行輔助</span></label>
@@ -378,7 +378,7 @@ select { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid rgba
   <section class="stage" aria-label="3D 太空場景">
     <canvas id="space"></canvas>
     <div class="stage-tools">
-      <span id="cameraHint">左鍵旋轉 · 中鍵平移 · 滾輪縮放</span>
+      <span id="cameraHint">左鍵旋轉 · 右鍵平移 · 滾輪縮放</span>
       <button id="resetView" type="button" aria-label="重設太空場景視角">重設視角</button>
     </div>
     <div class="event-banner" id="eventBanner" aria-live="polite"></div>
@@ -1505,7 +1505,7 @@ function cursorOnOrbitalPlane(e){
 function setZoomAt(clientX,clientY,z){
   const before=cursorOnOrbitalPlane({clientX,clientY});
   const oldZoom=Number(ui.zoom.value),oldDistance=4200/oldZoom;
-  z=Math.max(.45,Math.min(2.2,z));
+  z=Math.max(.45,Math.min(10.0,z));
   ui.zoom.value=z;ui.zoom.oninput();
   if(before){
     const oldTarget=new THREE.Vector3(view3d.targetX,0,view3d.targetZ);
@@ -1541,11 +1541,11 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
-  // CAD 常見操作：左鍵旋轉、中鍵平移；滾輪由 wheel 事件負責縮放。
-  if(e.button!==0&&e.button!==1)return;
+  // 左鍵旋轉、右鍵平移；滾輪由 wheel 事件負責縮放。
+  if(e.button!==0&&e.button!==2)return;
   e.preventDefault();
   view3d.manualTarget=true;
-  view3d.dragMode=e.button===1?'pan':'rotate';
+  view3d.dragMode=e.button===2?'pan':'rotate';
   view3d.dragging=true;view3d.lastX=e.clientX;view3d.lastY=e.clientY;canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor='grabbing';
 });
